@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>求人管理</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">採</span>
+        <div>
+          <h1>求人管理</h1>
+          <p>応募者・面接・保管期限</p>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="dashboard">概要</button>
+        <button class="nav-item" data-view="candidates">応募者</button>
+        <button class="nav-item" data-view="schedule">日程</button>
+        <button class="nav-item" data-view="privacy">個人情報</button>
+      </nav>
+      <div class="sidebar-footer">
+        <span>保管期限</span>
+        <strong id="policyDays">365日</strong>
+      </div>
+    </aside>
+
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Recruiting Operations</p>
+          <h2 id="viewTitle">概要</h2>
+        </div>
+        <div class="topbar-actions">
+          <label class="search">
+            <span>検索</span>
+            <input id="searchInput" type="search" placeholder="氏名・求人・ステータス" />
+          </label>
+          <button class="primary" id="newCandidateBtn">＋ 応募者</button>
+        </div>
+      </header>
+
+      <section class="view active" id="dashboardView">
+        <div class="metrics">
+          <article>
+            <span>応募者</span>
+            <strong id="metricCandidates">0</strong>
+          </article>
+          <article>
+            <span>面接調整中</span>
+            <strong id="metricScheduling">0</strong>
+          </article>
+          <article>
+            <span>今後7日面接</span>
+            <strong id="metricUpcoming">0</strong>
+          </article>
+          <article class="risk">
+            <span>破棄対象</span>
+            <strong id="metricExpired">0</strong>
+          </article>
+        </div>
+
+        <div class="two-column">
+          <section class="panel">
+            <div class="panel-head">
+              <h3>求人</h3>
+              <button class="ghost" id="addJobBtn">＋</button>
+            </div>
+            <div id="jobsList" class="job-list"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h3>直近の面接</h3>
+              <button class="ghost" data-view-link="schedule">↗</button>
+            </div>
+            <div id="upcomingList" class="timeline"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="candidatesView">
+        <div class="workspace-grid">
+          <section class="panel table-panel">
+            <div class="panel-head">
+              <h3>応募者一覧</h3>
+              <select id="statusFilter">
+                <option value="all">すべて</option>
+                <option value="応募受付">応募受付</option>
+                <option value="書類選考中">書類選考中</option>
+                <option value="面接調整中">面接調整中</option>
+                <option value="面接確定">面接確定</option>
+                <option value="内定">内定</option>
+                <option value="不採用">不採用</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>氏名</th>
+                    <th>求人</th>
+                    <th>ステータス</th>
+                    <th>面接</th>
+                    <th>保管期限</th>
+                  </tr>
+                </thead>
+                <tbody id="candidateRows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel detail-panel">
+            <div class="panel-head">
+              <h3>応募者詳細</h3>
+              <button class="danger ghost" id="deleteCandidateBtn">破棄</button>
+            </div>
+            <form id="candidateForm">
+              <label>
+                氏名
+                <input name="name" required />
+              </label>
+              <label>
+                メール
+                <input name="email" type="email" />
+              </label>
+              <label>
+                応募求人
+                <select name="jobId" id="jobSelect"></select>
+              </label>
+              <label>
+                ステータス
+                <select name="status">
+                  <option>応募受付</option>
+                  <option>書類選考中</option>
+                  <option>面接調整中</option>
+                  <option>面接確定</option>
+                  <option>内定</option>
+                  <option>不採用</option>
+                </select>
+              </label>
+              <label>
+                応募日
+                <input name="appliedAt" type="date" required />
+              </label>
+              <label>
+                面接日時
+                <input name="interviewAt" type="datetime-local" />
+              </label>
+              <label>
+                面接担当
+                <input name="interviewer" />
+              </label>
+              <label>
+                履歴書
+                <input name="resumeFile" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" />
+              </label>
+              <label class="full">
+                メモ
+                <textarea name="notes" rows="4"></textarea>
+              </label>
+              <div class="form-actions">
+                <span id="resumeName">未登録</span>
+                <button class="primary" type="submit">保存</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="scheduleView">
+        <div class="panel">
+          <div class="panel-head">
+            <h3>面接スケジュール</h3>
+            <button class="ghost" id="exportCalendarBtn">ICS</button>
+          </div>
+          <div id="scheduleBoard" class="schedule-board"></div>
+        </div>
+      </section>
+
+      <section class="view" id="privacyView">
+        <div class="workspace-grid privacy-grid">
+          <section class="panel">
+            <div class="panel-head">
+              <h3>保管期限</h3>
+              <button class="danger" id="purgeExpiredBtn">期限切れを破棄</button>
+            </div>
+            <div id="retentionList" class="retention-list"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head">
+              <h3>破棄ログ</h3>
+              <button class="ghost" id="clearLogBtn">消去</button>
+            </div>
+            <div id="auditLog" class="audit-log"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="jobDialog">
+      <form method="dialog" id="jobForm">
+        <h3>求人を追加</h3>
+        <label>
+          職種
+          <input name="title" required />
+        </label>
+        <label>
+          勤務地
+          <input name="location" required />
+        </label>
+        <label>
+          雇用形態
+          <select name="type">
+            <option>正社員</option>
+            <option>契約社員</option>
+            <option>アルバイト</option>
+            <option>業務委託</option>
+          </select>
+        </label>
+        <menu>
+          <button value="cancel">キャンセル</button>
+          <button class="primary" value="default">追加</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
