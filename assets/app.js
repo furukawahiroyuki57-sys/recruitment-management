@@ -1,6 +1,7 @@
 const STORAGE_KEY = "restaurant-recruitment-candidates-v1";
 const APPLICATION_SOURCES = ["Indeed", "Airワーク", "グルメキャリー", "バイトル", "飲食店ドットコム", "Instagram", "紹介", "その他"];
 const CANDIDATE_STATUSES = ["応募受付", "書類選考", "面接調整中", "一次面接", "二次面接", "採用", "不採用", "辞退", "保留"];
+const HIRING_DECISIONS = ["未定", "採用", "不採用", "辞退", "保留"];
 const navigation = [["dashboard", "ダッシュボード"], ["applicants", "応募者"], ["interviews", "面接"], ["stores", "配属店舗"], ["analytics", "分析"], ["settings", "設定"]];
 const jobs = [
   { id: "j1", title: "寿司職人", location: "店舗", type: "正社員", status: "公開中" },
@@ -11,10 +12,10 @@ const jobs = [
   { id: "j6", title: "アルバイト（ホール）", location: "店舗", type: "アルバイト", status: "公開中" }
 ];
 const defaultCandidates = [
-  { id: "c1", name: "山田 太郎", email: "taro.yamada@example.com", jobId: "j1", storeId: "s3", status: "一次面接", applicationSource: "Indeed", applicationSourceOther: "", appliedAt: "2026-07-05", interviewAt: "2026-07-06T14:00", interviewer: "山田", resumeName: "yamada_taro.pdf" },
-  { id: "c2", name: "佐藤 花子", email: "hanako.sato@example.com", jobId: "j3", storeId: "s2", status: "面接調整中", applicationSource: "Instagram", applicationSourceOther: "", appliedAt: "2026-07-05", interviewAt: "", interviewer: "鈴木", resumeName: "sato_hanako.pdf" },
-  { id: "c3", name: "鈴木 一郎", email: "ichiro.suzuki@example.com", jobId: "j6", storeId: "s1", status: "採用", applicationSource: "Airワーク", applicationSourceOther: "", appliedAt: "2026-06-20", interviewAt: "2026-07-05T10:00", interviewer: "中村", resumeName: "suzuki_ichiro.pdf" },
-  { id: "c4", name: "高橋 美咲", email: "misaki.takahashi@example.com", jobId: "j2", storeId: "s3", status: "応募受付", applicationSource: "紹介", applicationSourceOther: "", appliedAt: "2026-07-02", interviewAt: "", interviewer: "", resumeName: "takahashi_misaki.pdf" }
+  { id: "c1", name: "山田 太郎", email: "taro.yamada@example.com", phone: "", jobId: "j1", storeId: "s3", status: "一次面接", applicationSource: "Indeed", applicationSourceOther: "", appliedAt: "2026-07-05", interviewAt: "2026-07-06T14:00", interviewer: "山田", resumeName: "yamada_taro.pdf", interviewHistory: "", evaluation: "", hiringDecision: "未定", memo: "" },
+  { id: "c2", name: "佐藤 花子", email: "hanako.sato@example.com", phone: "", jobId: "j3", storeId: "s2", status: "面接調整中", applicationSource: "Instagram", applicationSourceOther: "", appliedAt: "2026-07-05", interviewAt: "", interviewer: "鈴木", resumeName: "sato_hanako.pdf", interviewHistory: "", evaluation: "", hiringDecision: "未定", memo: "" },
+  { id: "c3", name: "鈴木 一郎", email: "ichiro.suzuki@example.com", phone: "", jobId: "j6", storeId: "s1", status: "採用", applicationSource: "Airワーク", applicationSourceOther: "", appliedAt: "2026-06-20", interviewAt: "2026-07-05T10:00", interviewer: "中村", resumeName: "suzuki_ichiro.pdf", interviewHistory: "", evaluation: "", hiringDecision: "採用", memo: "" },
+  { id: "c4", name: "高橋 美咲", email: "misaki.takahashi@example.com", phone: "", jobId: "j2", storeId: "s3", status: "応募受付", applicationSource: "紹介", applicationSourceOther: "", appliedAt: "2026-07-02", interviewAt: "", interviewer: "", resumeName: "takahashi_misaki.pdf", interviewHistory: "", evaluation: "", hiringDecision: "未定", memo: "" }
 ];
 const interviews = [
   { id: "i1", candidateId: "c1", scheduledAt: "2026-07-05T14:00", interviewer: "山田", format: "オンライン" },
@@ -39,7 +40,12 @@ function loadCandidates() {
     ...candidate,
     storeId: candidate.storeId || "s1",
     applicationSource: candidate.applicationSource || "Indeed",
-    applicationSourceOther: candidate.applicationSourceOther || ""
+    applicationSourceOther: candidate.applicationSourceOther || "",
+    phone: candidate.phone || "",
+    interviewHistory: candidate.interviewHistory || defaultInterviewHistory(candidate),
+    evaluation: candidate.evaluation || "",
+    hiringDecision: candidate.hiringDecision || inferHiringDecision(candidate.status),
+    memo: candidate.memo || ""
   }));
 }
 
@@ -87,6 +93,10 @@ function input(label, name, placeholder = "", type = "text", value = "") {
   return `<label class="grid gap-1.5 text-sm font-medium text-slate-600">${escapeHtml(label)}<input name="${name}" type="${type}" value="${escapeHtml(value)}" placeholder="${escapeHtml(placeholder)}" class="min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100" /></label>`;
 }
 
+function textarea(label, name, placeholder = "", value = "") {
+  return `<label class="grid gap-1.5 text-sm font-medium text-slate-600">${escapeHtml(label)}<textarea name="${name}" rows="3" placeholder="${escapeHtml(placeholder)}" class="min-h-24 resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100">${escapeHtml(value)}</textarea></label>`;
+}
+
 function select(label, name, options, selected = "") {
   return `<label class="grid gap-1.5 text-sm font-medium text-slate-600">${escapeHtml(label)}<select name="${name}" class="min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100">${options.map((option) => `<option value="${escapeHtml(option.value)}" ${option.value === selected ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}</select></label>`;
 }
@@ -120,6 +130,16 @@ function jobTitle(jobId) {
 
 function storeName(storeId) {
   return stores.find((store) => store.id === storeId)?.name || "未設定";
+}
+
+function inferHiringDecision(status) {
+  return HIRING_DECISIONS.includes(status) ? status : "未定";
+}
+
+function defaultInterviewHistory(candidate) {
+  if (!candidate.interviewAt) return "";
+  const interviewer = candidate.interviewer ? `（担当: ${candidate.interviewer}）` : "";
+  return `${formatDateTime(candidate.interviewAt)} ${candidate.status}${interviewer}`;
 }
 
 function statusTone(status) {
@@ -159,7 +179,7 @@ function kpis() {
 function filteredCandidates() {
   const query = filters.query.trim().toLowerCase();
   return candidates.filter((candidate) => {
-    const haystack = `${candidate.name} ${candidate.email} ${jobTitle(candidate.jobId)} ${storeName(candidate.storeId)} ${sourceLabel(candidate)} ${candidate.status}`.toLowerCase();
+    const haystack = `${candidate.name} ${candidate.email} ${candidate.phone} ${jobTitle(candidate.jobId)} ${storeName(candidate.storeId)} ${sourceLabel(candidate)} ${candidate.status} ${candidate.evaluation} ${candidate.hiringDecision} ${candidate.memo}`.toLowerCase();
     const queryMatches = !query || haystack.includes(query);
     const sourceMatches = filters.source === "all" || candidate.applicationSource === filters.source;
     return queryMatches && sourceMatches;
@@ -187,7 +207,7 @@ function applicantTable(rows) {
   return table([
     { label: "応募者", render: (row) => `<strong>${escapeHtml(row.name)}</strong><br><span class="text-slate-500">${escapeHtml(row.email)}</span>` },
     { label: "募集区分", render: (row) => escapeHtml(jobTitle(row.jobId)) },
-    { label: "配属店舗", render: (row) => escapeHtml(storeName(row.storeId)) },
+    { label: "希望店舗", render: (row) => escapeHtml(storeName(row.storeId)) },
     { label: "応募媒体", render: (row) => badge(sourceLabel(row), "primary") },
     { label: "選考状況", render: (row) => badge(row.status, statusTone(row.status)) },
     { label: "", render: () => `<button class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50" data-edit-button type="button">✎ 編集</button>` }
@@ -241,14 +261,14 @@ function applicantsPage() {
   const sourceOptions = APPLICATION_SOURCES.map((source) => ({ label: source, value: source }));
   const jobOptions = jobs.map((job) => ({ label: job.title, value: job.id }));
   const storeOptions = stores.map((store) => ({ label: store.name, value: store.id }));
-  return `<section class="grid gap-6 xl:grid-cols-[1fr_380px]"><div><div class="mb-4 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px]">${input("検索", "search", "氏名・募集区分・配属店舗・媒体・選考状況", "text", filters.query)}${select("応募媒体", "source", [{ label: "すべて", value: "all" }, ...sourceOptions], filters.source)}</div><div id="applicantResults">${applicantTable(filteredCandidates())}</div></div>${card(`<h3 class="text-base font-semibold text-slate-950">応募者登録</h3><form class="mt-4 grid gap-4">${input("氏名", "name", "山田 太郎")}${input("メール", "email", "example@company.com", "email")}${select("募集区分", "jobId", jobOptions)}${select("配属店舗", "storeId", storeOptions)}${select("応募媒体", "applicationSource", sourceOptions)}${input("その他媒体名", "applicationSourceOther", "その他を選択した場合のみ使用")}${button("応募者を保存", "primary")}</form>`)}</section>`;
+  return `<section class="grid gap-6 xl:grid-cols-[1fr_380px]"><div><div class="mb-4 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px]">${input("検索", "search", "氏名・募集区分・希望店舗・媒体・選考状況", "text", filters.query)}${select("応募媒体", "source", [{ label: "すべて", value: "all" }, ...sourceOptions], filters.source)}</div><div id="applicantResults">${applicantTable(filteredCandidates())}</div></div>${card(`<h3 class="text-base font-semibold text-slate-950">応募者登録</h3><form class="mt-4 grid gap-4">${input("氏名", "name", "山田 太郎")}${input("電話番号", "phone", "090-0000-0000", "tel")}${input("メール", "email", "example@company.com", "email")}${select("募集区分", "jobId", jobOptions)}${select("希望店舗", "storeId", storeOptions)}${select("応募媒体", "applicationSource", sourceOptions)}${input("その他媒体名", "applicationSourceOther", "その他を選択した場合のみ使用")}${button("応募者を保存", "primary")}</form>`)}</section>`;
 }
 
 function interviewsPage() {
   return table([
     { label: "応募者", render: (row) => escapeHtml(candidates.find((candidate) => candidate.id === row.candidateId)?.name || "未設定") },
     { label: "募集区分", render: (row) => escapeHtml(jobTitle(candidates.find((candidate) => candidate.id === row.candidateId)?.jobId)) },
-    { label: "配属店舗", render: (row) => escapeHtml(storeName(candidates.find((candidate) => candidate.id === row.candidateId)?.storeId)) },
+    { label: "希望店舗", render: (row) => escapeHtml(storeName(candidates.find((candidate) => candidate.id === row.candidateId)?.storeId)) },
     { label: "面接日時", render: (row) => escapeHtml(formatDateTime(row.scheduledAt)) },
     { label: "面接担当", render: (row) => escapeHtml(row.interviewer) },
     { label: "形式", render: (row) => badge(row.format, row.format === "オンライン" ? "primary" : "success") }
@@ -269,12 +289,13 @@ function editModal() {
   if (!candidate) return "";
   const sourceOptions = APPLICATION_SOURCES.map((source) => ({ label: source, value: source }));
   const statusOptions = CANDIDATE_STATUSES.map((status) => ({ label: status, value: status }));
+  const hiringDecisionOptions = HIRING_DECISIONS.map((decision) => ({ label: decision, value: decision }));
   const jobOptions = jobs.map((job) => ({ label: job.title, value: job.id }));
   const storeOptions = stores.map((store) => ({ label: store.name, value: store.id }));
   const showOther = candidate.applicationSource === "その他";
   return `
     <div class="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="editCandidateTitle">
-      <section class="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+      <section class="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
         <div class="flex items-center justify-between gap-4 border-b border-slate-200 p-5">
           <h2 id="editCandidateTitle" class="text-lg font-semibold text-slate-950">応募者を編集</h2>
           <button id="closeEditModal" class="grid h-9 w-9 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100" type="button" aria-label="閉じる">×</button>
@@ -282,11 +303,12 @@ function editModal() {
         <form id="editCandidateForm" class="grid gap-4 p-5">
           <div class="grid gap-4 sm:grid-cols-2">
             ${input("氏名", "name", "", "text", candidate.name)}
-            ${input("メール", "email", "", "email", candidate.email)}
+            ${input("電話番号", "phone", "", "tel", candidate.phone)}
           </div>
+          ${input("メール", "email", "", "email", candidate.email)}
           <div class="grid gap-4 sm:grid-cols-2">
             ${select("募集区分", "jobId", jobOptions, candidate.jobId)}
-            ${select("配属店舗", "storeId", storeOptions, candidate.storeId)}
+            ${select("希望店舗", "storeId", storeOptions, candidate.storeId)}
           </div>
           <div class="grid gap-4 sm:grid-cols-2">
             ${select("選考状況", "status", statusOptions, candidate.status)}
@@ -294,7 +316,11 @@ function editModal() {
           </div>
           <div class="grid gap-4 sm:grid-cols-2">
             <div id="otherSourceField" class="${showOther ? "" : "hidden"}">${input("その他媒体名", "applicationSourceOther", "", "text", candidate.applicationSourceOther)}</div>
+            ${select("採否", "hiringDecision", hiringDecisionOptions, candidate.hiringDecision)}
           </div>
+          ${textarea("面接履歴", "interviewHistory", "面接日時・担当者・結果など", candidate.interviewHistory)}
+          ${input("評価", "evaluation", "例: 接客経験あり、即戦力候補", "text", candidate.evaluation)}
+          ${textarea("メモ", "memo", "応募者に関するメモ", candidate.memo)}
           <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
             ${button("キャンセル", "secondary", "id=\"cancelEditCandidate\" type=\"button\"")}
             ${button("保存", "primary", "type=\"submit\"")}
@@ -323,11 +349,16 @@ function updateCandidate(form) {
   Object.assign(candidate, {
     name: String(data.get("name")).trim(),
     email: String(data.get("email")).trim(),
+    phone: String(data.get("phone")).trim(),
     jobId: String(data.get("jobId")),
     storeId: String(data.get("storeId")),
     status: String(data.get("status")),
     applicationSource,
-    applicationSourceOther: applicationSource === "その他" ? String(data.get("applicationSourceOther")).trim() : ""
+    applicationSourceOther: applicationSource === "その他" ? String(data.get("applicationSourceOther")).trim() : "",
+    interviewHistory: String(data.get("interviewHistory")).trim(),
+    evaluation: String(data.get("evaluation")).trim(),
+    hiringDecision: String(data.get("hiringDecision")),
+    memo: String(data.get("memo")).trim()
   });
   saveCandidates();
   editingCandidateId = "";
