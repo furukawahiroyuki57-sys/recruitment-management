@@ -3,9 +3,9 @@ const APPLICATION_SOURCES = ["Airワーク", "Indeed", "グルメキャリー", 
 const CANDIDATE_STATUSES = ["応募受付", "書類選考中", "面接調整中", "面接確定", "内定", "不採用"];
 const navigation = [["dashboard", "ダッシュボード"], ["applicants", "応募者"], ["interviews", "面接"], ["stores", "店舗"], ["analytics", "分析"], ["settings", "設定"]];
 const jobs = [
-  { id: "j1", title: "フロントエンドエンジニア", location: "東京 / リモート", type: "正社員", status: "公開中" },
-  { id: "j2", title: "カスタマーサクセス", location: "大阪", type: "正社員", status: "公開中" },
-  { id: "j3", title: "採用アシスタント", location: "東京", type: "契約社員", status: "停止中" }
+  { id: "j1", title: "調理", location: "店舗", type: "正社員", status: "公開中" },
+  { id: "j2", title: "ホール", location: "店舗", type: "正社員", status: "公開中" },
+  { id: "j3", title: "アルバイト", location: "店舗", type: "アルバイト", status: "公開中" }
 ];
 const defaultCandidates = [
   { id: "c1", name: "佐藤 花子", email: "hanako.sato@example.com", jobId: "j1", status: "面接確定", applicationSource: "Indeed", applicationSourceOther: "", appliedAt: "2026-07-05", interviewAt: "2026-07-05T14:00", interviewer: "山田", resumeName: "sato_hanako_resume.pdf" },
@@ -168,7 +168,7 @@ function applicantTable(rows) {
   if (!rows.length) return emptyState("応募者がいません", "検索条件に一致する応募者はいません。");
   return table([
     { label: "応募者", render: (row) => `<strong>${escapeHtml(row.name)}</strong><br><span class="text-slate-500">${escapeHtml(row.email)}</span>` },
-    { label: "求人", render: (row) => escapeHtml(jobTitle(row.jobId)) },
+    { label: "募集区分", render: (row) => escapeHtml(jobTitle(row.jobId)) },
     { label: "応募媒体", render: (row) => badge(sourceLabel(row), "primary") },
     { label: "ステータス", render: (row) => badge(row.status, row.status === "内定" ? "success" : row.status === "不採用" ? "danger" : "default") },
     { label: "", render: () => `<button class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50" data-edit-button type="button">✎ 編集</button>` }
@@ -182,7 +182,7 @@ function sourcePanel() {
 function applicantsPage() {
   const sourceOptions = APPLICATION_SOURCES.map((source) => ({ label: source, value: source }));
   const jobOptions = jobs.map((job) => ({ label: job.title, value: job.id }));
-  return `<section class="grid gap-6 xl:grid-cols-[1fr_380px]"><div><div class="mb-4 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px]">${input("検索", "search", "氏名・求人・媒体", "text", filters.query)}${select("応募媒体", "source", [{ label: "すべて", value: "all" }, ...sourceOptions], filters.source)}</div><div id="applicantResults">${applicantTable(filteredCandidates())}</div></div>${card(`<h3 class="text-base font-semibold text-slate-950">応募者登録</h3><form class="mt-4 grid gap-4">${input("氏名", "name", "山田 太郎")}${input("メール", "email", "example@company.com", "email")}${select("求人", "jobId", jobOptions)}${select("応募媒体", "applicationSource", sourceOptions)}${input("その他媒体名", "applicationSourceOther", "その他を選択した場合のみ使用")}${button("応募者を保存", "primary")}</form>`)}</section>`;
+  return `<section class="grid gap-6 xl:grid-cols-[1fr_380px]"><div><div class="mb-4 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px]">${input("検索", "search", "氏名・募集区分・媒体", "text", filters.query)}${select("応募媒体", "source", [{ label: "すべて", value: "all" }, ...sourceOptions], filters.source)}</div><div id="applicantResults">${applicantTable(filteredCandidates())}</div></div>${card(`<h3 class="text-base font-semibold text-slate-950">応募者登録</h3><form class="mt-4 grid gap-4">${input("氏名", "name", "山田 太郎")}${input("メール", "email", "example@company.com", "email")}${select("募集区分", "jobId", jobOptions)}${select("応募媒体", "applicationSource", sourceOptions)}${input("その他媒体名", "applicationSourceOther", "その他を選択した場合のみ使用")}${button("応募者を保存", "primary")}</form>`)}</section>`;
 }
 
 function interviewsPage() {
@@ -195,7 +195,7 @@ function interviewsPage() {
 }
 
 function storesPage() {
-  return `<section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">${stores.map((store) => card(`<p class="text-sm text-slate-500">${escapeHtml(store.area)}</p><h3 class="mt-2 text-lg font-semibold text-slate-950">${escapeHtml(store.name)}</h3><p class="mt-4 text-sm text-slate-600">募集中の職種: <strong>${store.openings}</strong></p>`)).join("")}</section>`;
+  return `<section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">${stores.map((store) => card(`<p class="text-sm text-slate-500">${escapeHtml(store.area)}</p><h3 class="mt-2 text-lg font-semibold text-slate-950">${escapeHtml(store.name)}</h3><p class="mt-4 text-sm text-slate-600">募集区分数: <strong>${store.openings}</strong></p>`)).join("")}</section>`;
 }
 
 function analyticsPage() {
@@ -223,7 +223,7 @@ function editModal() {
             ${input("メール", "email", "", "email", candidate.email)}
           </div>
           <div class="grid gap-4 sm:grid-cols-2">
-            ${select("応募求人", "jobId", jobOptions, candidate.jobId)}
+            ${select("募集区分", "jobId", jobOptions, candidate.jobId)}
             ${select("ステータス", "status", statusOptions, candidate.status)}
           </div>
           <div class="grid gap-4 sm:grid-cols-2">
