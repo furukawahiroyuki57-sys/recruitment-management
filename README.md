@@ -1,60 +1,57 @@
-# Recruitment Management System Ver2
+# 採用管理システム Ver2
 
-This repository is configured for GitHub Pages static hosting through GitHub Actions.
+このリポジトリは、GitHub Actions を使って GitHub Pages に静的公開する構成です。
 
-No build step is required for deployment.
+公開時のビルドは不要です。
 
-## Deploy
+## デプロイ
 
-GitHub Pages should be configured as:
+GitHub Pages の設定:
 
-- Source: `GitHub Actions`
+- 公開元: `GitHub Actions`
 
-The published files are:
+公開対象ファイル:
 
 - `index.html`
 - `assets/app.js`
 - `styles.css`
 - `.nojekyll`
 
-`index.html` loads the app with:
+`index.html` は以下でアプリを読み込みます。
 
 ```html
 <script type="module" src="./assets/app.js"></script>
 ```
 
-Because the app is loaded directly from `assets/app.js`, Vite, pnpm, TypeScript, and ESLint are not required for Pages deployment.
+アプリは `assets/app.js` から直接読み込むため、Pages 公開に Vite、pnpm、TypeScript、ESLint は不要です。
 
-Deployment is handled by `.github/workflows/deploy.yml` using `actions/upload-pages-artifact` and `actions/deploy-pages`.
+デプロイは `.github/workflows/deploy.yml` で実行します。
 
-## Source Notes
+## 構成
 
 ```text
 /
  ├─ index.html
  ├─ assets/
  │   └─ app.js
+ ├─ styles.css
  ├─ .nojekyll
  └─ README.md
 ```
 
-## Sprint1 Scope
+## 現在の範囲
 
-- Global layout with responsive sidebar, header, and main content
-- Sidebar pages: Dashboard, Applicants, Interviews, Stores, Analytics, Settings
-- Header actions: notifications, dark mode toggle UI, profile icon
-- Dashboard KPI cards with placeholder data
-- Reusable components: Button, Card, Input, Select, Textarea, Badge, Modal, Table, Skeleton, Empty State
-- 404 and 500 pages
-- Tailwind design system using:
-  - Primary `#2563EB`
-  - Success `#22C55E`
-  - Warning `#F59E0B`
-  - Danger `#EF4444`
-  - Background `#F8FAFC`
+- レスポンシブ対応のサイドバー、ヘッダー、メインコンテンツ
+- ダッシュボード、応募者、面接、店舗、分析、設定
+- 通知、ダークモード切替、プロフィールの表示
+- KPIカード
+- 応募者一覧、応募者編集モーダル
+- 応募媒体別の応募数と採用率
+- 404 / 500 表示
+- GitHub Pages 用の静的公開
 
-## Notes
+## 注意
 
-Existing recruitment screens remain represented with placeholder data. No database or backend integration is used in this sprint.
+現在の画面はプレースホルダーデータで表示しています。データベース連携やバックエンド処理は含めていません。
 
-Supabase and Airwork integration are intentionally not included.
+Supabase 連携と Airwork 連携はまだ追加していません。

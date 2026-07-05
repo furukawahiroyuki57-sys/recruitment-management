@@ -1,7 +1,7 @@
 const STORAGE_KEY = "recruitment-management-v2-candidates";
 const APPLICATION_SOURCES = ["Airワーク", "Indeed", "グルメキャリー", "バイトル", "飲食店ドットコム", "求人ボックス", "エンゲージ", "タウンワーク", "リファラル（紹介）", "店舗看板", "Instagram", "TikTok", "X", "ホームページ", "その他"];
 const CANDIDATE_STATUSES = ["応募受付", "書類選考中", "面接調整中", "面接確定", "内定", "不採用"];
-const navigation = [["dashboard", "Dashboard"], ["applicants", "Applicants"], ["interviews", "Interviews"], ["stores", "Stores"], ["analytics", "Analytics"], ["settings", "Settings"]];
+const navigation = [["dashboard", "ダッシュボード"], ["applicants", "応募者"], ["interviews", "面接"], ["stores", "店舗"], ["analytics", "分析"], ["settings", "設定"]];
 const jobs = [
   { id: "j1", title: "フロントエンドエンジニア", location: "東京 / リモート", type: "正社員", status: "公開中" },
   { id: "j2", title: "カスタマーサクセス", location: "大阪", type: "正社員", status: "公開中" },
@@ -131,10 +131,10 @@ function isToday(value) {
 
 function kpis() {
   return [
-    { label: "Today's Applicants", value: String(candidates.filter((candidate) => isToday(candidate.appliedAt)).length), tone: "primary" },
-    { label: "Pending", value: String(candidates.filter((candidate) => !["内定", "不採用"].includes(candidate.status)).length), tone: "warning" },
-    { label: "Today's Interviews", value: String(candidates.filter((candidate) => isToday(candidate.interviewAt)).length), tone: "success" },
-    { label: "Monthly Hires", value: String(candidates.filter((candidate) => candidate.status === "内定").length), tone: "danger" }
+    { label: "本日の応募者", value: String(candidates.filter((candidate) => isToday(candidate.appliedAt)).length), tone: "primary" },
+    { label: "対応中", value: String(candidates.filter((candidate) => !["内定", "不採用"].includes(candidate.status)).length), tone: "warning" },
+    { label: "本日の面接", value: String(candidates.filter((candidate) => isToday(candidate.interviewAt)).length), tone: "success" },
+    { label: "今月の採用", value: String(candidates.filter((candidate) => candidate.status === "内定").length), tone: "danger" }
   ];
 }
 
@@ -153,49 +153,49 @@ function layout(title, content) {
 }
 
 function sidebar() {
-  return `<aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 -translate-x-full bg-slate-950 text-white shadow-xl transition lg:static lg:w-64 lg:translate-x-0 lg:shadow-none"><div class="flex h-16 items-center gap-3 border-b border-white/10 px-5"><span class="grid h-10 w-10 place-items-center rounded-xl bg-blue-600 font-bold">採</span><div><h1 class="text-base font-bold">Recruitment</h1><p class="text-xs text-slate-400">Management System</p></div></div><nav class="grid gap-1 p-4">${navigation.map(([id, label]) => `<button class="rounded-xl px-4 py-3 text-left text-sm font-semibold transition ${id === activePage ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-white/10 hover:text-white"}" data-page="${id}">${label}</button>`).join("")}</nav></aside>`;
+  return `<aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 -translate-x-full bg-slate-950 text-white shadow-xl transition lg:static lg:w-64 lg:translate-x-0 lg:shadow-none"><div class="flex h-16 items-center gap-3 border-b border-white/10 px-5"><span class="grid h-10 w-10 place-items-center rounded-xl bg-blue-600 font-bold">採</span><div><h1 class="text-base font-bold">採用管理</h1><p class="text-xs text-slate-400">採用管理システム</p></div></div><nav class="grid gap-1 p-4">${navigation.map(([id, label]) => `<button class="rounded-xl px-4 py-3 text-left text-sm font-semibold transition ${id === activePage ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-white/10 hover:text-white"}" data-page="${id}">${label}</button>`).join("")}</nav></aside>`;
 }
 
 function header(title) {
-  return `<header class="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur lg:px-6"><div class="flex min-w-0 items-center gap-3"><button id="menuToggle" class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 text-slate-600 lg:hidden" aria-label="Open sidebar">☰</button><div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-blue-600">Recruitment Management System Ver2</p><h2 class="truncate text-xl font-bold text-slate-950">${escapeHtml(title)}</h2></div></div><div class="flex items-center gap-2"><button class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 text-slate-600" aria-label="Notifications">🔔</button><button class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 text-slate-600" aria-label="Dark mode toggle">◐</button><button class="grid h-10 w-10 place-items-center rounded-full bg-slate-900 text-sm font-bold text-white" aria-label="Profile">HR</button></div></header>`;
+  return `<header class="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur lg:px-6"><div class="flex min-w-0 items-center gap-3"><button id="menuToggle" class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 text-slate-600 lg:hidden" aria-label="サイドバーを開く">☰</button><div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-blue-600">採用管理システム Ver2</p><h2 class="truncate text-xl font-bold text-slate-950">${escapeHtml(title)}</h2></div></div><div class="flex items-center gap-2"><button class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 text-slate-600" aria-label="通知">🔔</button><button class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 text-slate-600" aria-label="ダークモード切替">◐</button><button class="grid h-10 w-10 place-items-center rounded-full bg-slate-900 text-sm font-bold text-white" aria-label="プロフィール">採</button></div></header>`;
 }
 
 function dashboardPage() {
-  return `<section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">${kpis().map((kpi) => card(`<p class="text-sm font-medium text-slate-500">${escapeHtml(kpi.label)}</p><strong class="mt-3 block text-3xl text-slate-950">${escapeHtml(kpi.value)}</strong><div class="mt-3">${badge("Live", kpi.tone)}</div>`)).join("")}</section><section class="mt-6 grid gap-6 xl:grid-cols-[1fr_380px]">${applicantTable(candidates)}<div class="grid gap-4">${sourcePanel()}${skeleton()}</div></section>`;
+  return `<section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">${kpis().map((kpi) => card(`<p class="text-sm font-medium text-slate-500">${escapeHtml(kpi.label)}</p><strong class="mt-3 block text-3xl text-slate-950">${escapeHtml(kpi.value)}</strong><div class="mt-3">${badge("最新", kpi.tone)}</div>`)).join("")}</section><section class="mt-6 grid gap-6 xl:grid-cols-[1fr_380px]">${applicantTable(candidates)}<div class="grid gap-4">${sourcePanel()}${skeleton()}</div></section>`;
 }
 
 function applicantTable(rows) {
-  if (!rows.length) return emptyState("No applicants", "検索条件に一致する応募者はいません。");
+  if (!rows.length) return emptyState("応募者がいません", "検索条件に一致する応募者はいません。");
   return table([
-    { label: "Applicant", render: (row) => `<strong>${escapeHtml(row.name)}</strong><br><span class="text-slate-500">${escapeHtml(row.email)}</span>` },
-    { label: "Job", render: (row) => escapeHtml(jobTitle(row.jobId)) },
-    { label: "Source", render: (row) => badge(sourceLabel(row), "primary") },
-    { label: "Status", render: (row) => badge(row.status, row.status === "内定" ? "success" : row.status === "不採用" ? "danger" : "default") },
+    { label: "応募者", render: (row) => `<strong>${escapeHtml(row.name)}</strong><br><span class="text-slate-500">${escapeHtml(row.email)}</span>` },
+    { label: "求人", render: (row) => escapeHtml(jobTitle(row.jobId)) },
+    { label: "応募媒体", render: (row) => badge(sourceLabel(row), "primary") },
+    { label: "ステータス", render: (row) => badge(row.status, row.status === "内定" ? "success" : row.status === "不採用" ? "danger" : "default") },
     { label: "", render: () => `<button class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50" data-edit-button type="button">✎ 編集</button>` }
   ], rows, true);
 }
 
 function sourcePanel() {
-  return card(`<h3 class="text-base font-semibold text-slate-950">Application Sources</h3><div class="mt-4 grid gap-3">${sourceStats().map((stats) => `<article><div class="flex items-center justify-between gap-3 text-sm"><strong>${escapeHtml(stats.source)}</strong><span class="text-slate-500">${stats.applications} applicants</span></div><div class="mt-2 h-2 rounded-full bg-slate-100"><div class="h-2 rounded-full bg-blue-600" style="width: ${stats.hireRate}%"></div></div><p class="mt-1 text-xs text-slate-500">Hire rate ${stats.hireRate}%</p></article>`).join("")}</div>`);
+  return card(`<h3 class="text-base font-semibold text-slate-950">応募媒体</h3><div class="mt-4 grid gap-3">${sourceStats().map((stats) => `<article><div class="flex items-center justify-between gap-3 text-sm"><strong>${escapeHtml(stats.source)}</strong><span class="text-slate-500">${stats.applications}件</span></div><div class="mt-2 h-2 rounded-full bg-slate-100"><div class="h-2 rounded-full bg-blue-600" style="width: ${stats.hireRate}%"></div></div><p class="mt-1 text-xs text-slate-500">採用率 ${stats.hireRate}%</p></article>`).join("")}</div>`);
 }
 
 function applicantsPage() {
   const sourceOptions = APPLICATION_SOURCES.map((source) => ({ label: source, value: source }));
   const jobOptions = jobs.map((job) => ({ label: job.title, value: job.id }));
-  return `<section class="grid gap-6 xl:grid-cols-[1fr_380px]"><div><div class="mb-4 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px]">${input("Search", "search", "Name, job, source", "text", filters.query)}${select("Application Source", "source", [{ label: "All", value: "all" }, ...sourceOptions], filters.source)}</div><div id="applicantResults">${applicantTable(filteredCandidates())}</div></div>${card(`<h3 class="text-base font-semibold text-slate-950">Applicant Registration</h3><form class="mt-4 grid gap-4">${input("Name", "name", "山田 太郎")}${input("Email", "email", "example@company.com", "email")}${select("Job", "jobId", jobOptions)}${select("Application Source", "applicationSource", sourceOptions)}${input("Other Source", "applicationSourceOther", "その他を選択した場合のみ使用")}${button("Save Applicant", "primary")}</form>`)}</section>`;
+  return `<section class="grid gap-6 xl:grid-cols-[1fr_380px]"><div><div class="mb-4 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px]">${input("検索", "search", "氏名・求人・媒体", "text", filters.query)}${select("応募媒体", "source", [{ label: "すべて", value: "all" }, ...sourceOptions], filters.source)}</div><div id="applicantResults">${applicantTable(filteredCandidates())}</div></div>${card(`<h3 class="text-base font-semibold text-slate-950">応募者登録</h3><form class="mt-4 grid gap-4">${input("氏名", "name", "山田 太郎")}${input("メール", "email", "example@company.com", "email")}${select("求人", "jobId", jobOptions)}${select("応募媒体", "applicationSource", sourceOptions)}${input("その他媒体名", "applicationSourceOther", "その他を選択した場合のみ使用")}${button("応募者を保存", "primary")}</form>`)}</section>`;
 }
 
 function interviewsPage() {
   return table([
-    { label: "Applicant", render: (row) => escapeHtml(candidates.find((candidate) => candidate.id === row.candidateId)?.name || "未設定") },
-    { label: "Schedule", render: (row) => escapeHtml(formatDateTime(row.scheduledAt)) },
-    { label: "Interviewer", render: (row) => escapeHtml(row.interviewer) },
-    { label: "Format", render: (row) => badge(row.format, row.format === "オンライン" ? "primary" : "success") }
+    { label: "応募者", render: (row) => escapeHtml(candidates.find((candidate) => candidate.id === row.candidateId)?.name || "未設定") },
+    { label: "面接日時", render: (row) => escapeHtml(formatDateTime(row.scheduledAt)) },
+    { label: "面接担当", render: (row) => escapeHtml(row.interviewer) },
+    { label: "形式", render: (row) => badge(row.format, row.format === "オンライン" ? "primary" : "success") }
   ], interviews, false);
 }
 
 function storesPage() {
-  return `<section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">${stores.map((store) => card(`<p class="text-sm text-slate-500">${escapeHtml(store.area)}</p><h3 class="mt-2 text-lg font-semibold text-slate-950">${escapeHtml(store.name)}</h3><p class="mt-4 text-sm text-slate-600">Open positions: <strong>${store.openings}</strong></p>`)).join("")}</section>`;
+  return `<section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">${stores.map((store) => card(`<p class="text-sm text-slate-500">${escapeHtml(store.area)}</p><h3 class="mt-2 text-lg font-semibold text-slate-950">${escapeHtml(store.name)}</h3><p class="mt-4 text-sm text-slate-600">募集中の職種: <strong>${store.openings}</strong></p>`)).join("")}</section>`;
 }
 
 function analyticsPage() {
@@ -269,9 +269,9 @@ function updateCandidate(form) {
 }
 
 function render() {
-  const pages = { dashboard: dashboardPage, applicants: applicantsPage, interviews: interviewsPage, stores: storesPage, analytics: analyticsPage, settings: () => emptyState("Settings", "Future use only.") };
-  const titles = { dashboard: "Dashboard", applicants: "Applicants", interviews: "Interviews", stores: "Stores", analytics: "Analytics", settings: "Settings" };
-  const page = pages[activePage] ? pages[activePage]() : emptyState("404", "The requested page could not be found.");
+  const pages = { dashboard: dashboardPage, applicants: applicantsPage, interviews: interviewsPage, stores: storesPage, analytics: analyticsPage, settings: () => emptyState("設定", "今後の機能追加用ページです。") };
+  const titles = { dashboard: "ダッシュボード", applicants: "応募者", interviews: "面接", stores: "店舗", analytics: "分析", settings: "設定" };
+  const page = pages[activePage] ? pages[activePage]() : emptyState("404", "ページが見つかりません。");
   document.querySelector("#app").innerHTML = layout(titles[activePage] || "404", page);
   bindEvents();
 }
@@ -327,7 +327,7 @@ function bindCandidateRows() {
 }
 
 window.addEventListener("error", () => {
-  document.querySelector("#app").innerHTML = layout("500", emptyState("500", "Something went wrong. Please try again later."));
+  document.querySelector("#app").innerHTML = layout("500", emptyState("500", "エラーが発生しました。時間をおいて再度お試しください。"));
 });
 
 render();
