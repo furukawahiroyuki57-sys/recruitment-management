@@ -1,56 +1,40 @@
 # Recruitment Management System Ver2
 
-Sprint1 focuses on architecture, reusable UI components, and a modern responsive interface.
+This repository is configured for GitHub Pages static hosting from `main / root`.
 
-This sprint does not include authentication, Supabase, Airwork integration, or backend logic.
-
-## Setup
-
-```bash
-pnpm install
-pnpm run dev
-```
-
-## Quality Checks
-
-```bash
-pnpm run typecheck
-pnpm run lint
-pnpm run build
-```
+No build step is required for deployment.
 
 ## Deploy
 
-For GitHub Pages static deployment, upload:
+GitHub Pages should be configured as:
+
+- Source: `Deploy from a branch`
+- Branch: `main`
+- Folder: `/ (root)`
+
+The published files are:
 
 - `index.html`
-- `assets/`
+- `assets/app.js`
+- `.nojekyll`
 
-For a Vite build deployment:
+`index.html` loads the app with:
 
-```bash
-pnpm run build
+```html
+<script type="module" src="./assets/app.js"></script>
 ```
 
-Then deploy `dist/`.
+Because the app is loaded directly from `assets/app.js`, Vite, pnpm, TypeScript, and ESLint are not required for Pages deployment.
 
-Do not upload `node_modules/`.
-
-## Folder Structure
+## Source Notes
 
 ```text
-src/
- ├─ components/   Reusable UI components
- ├─ layouts/      Sidebar, header, app shell
- ├─ pages/        Dashboard, Applicants, Interviews, Stores, Analytics, Settings, errors
- ├─ hooks/        UI state helpers
- ├─ services/     Placeholder data access layer
- ├─ lib/          Small framework helpers
- ├─ types/        TypeScript domain types
- ├─ utils/        Formatting and derived stats
- ├─ constants/    Navigation, theme, mock data
- ├─ assets/       Static assets
- └─ styles/       Tailwind entry
+/
+ ├─ index.html
+ ├─ assets/
+ │   └─ app.js
+ ├─ .nojekyll
+ └─ README.md
 ```
 
 ## Sprint1 Scope
@@ -71,3 +55,5 @@ src/
 ## Notes
 
 Existing recruitment screens remain represented with placeholder data. No database or backend integration is used in this sprint.
+
+Supabase and Airwork integration are intentionally not included.
