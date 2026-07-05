@@ -98,6 +98,7 @@ function button(label, variant = "primary", attrs = "") {
   const classes = {
     primary: "bg-blue-600 text-white hover:bg-blue-700",
     secondary: "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50",
+    danger: "bg-white text-red-700 ring-1 ring-red-200 hover:bg-red-50",
     ghost: "text-slate-600 hover:bg-slate-100"
   };
   return `<button ${attrs} class="inline-flex min-h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold shadow-sm transition ${classes[variant]}">${escapeHtml(label)}</button>`;
@@ -125,6 +126,10 @@ function table(columns, rows, editable = false) {
     const editableAttrs = editable ? `class="cursor-pointer align-top transition hover:bg-blue-50/60 focus-within:bg-blue-50" data-candidate-id="${escapeHtml(row.id)}" tabindex="0" aria-label="${escapeHtml(row.name)}を編集"` : `class="align-top"`;
     return `<tr ${editableAttrs}>${columns.map((column) => `<td class="px-4 py-3">${column.render(row)}</td>`).join("")}</tr>`;
   }).join("")}</tbody></table></div></div>`;
+}
+
+function isInteractiveTarget(target) {
+  return target instanceof Element && Boolean(target.closest("button, a, input, select, textarea"));
 }
 
 function emptyState(title, message) {
@@ -256,6 +261,7 @@ function applicantTable(rows) {
     { label: "応募媒体", render: (row) => badge(sourceLabel(row), "primary") },
     { label: "履歴書", render: (row) => row.resume ? badge("履歴書あり", "success") : `<span class="text-slate-400">未登録</span>` },
     { label: "選考状況", render: (row) => badge(row.status, statusTone(row.status)) },
+    { label: "", render: (row) => `<button class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50" data-delete-candidate-id="${escapeHtml(row.id)}" type="button">削除</button>` },
     { label: "", render: () => `<button class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50" data-edit-button type="button">✎ 編集</button>` }
   ], rows, true);
 }
@@ -344,6 +350,7 @@ function applicantsPage() {
 }
 
 function interviewsPage() {
+  const visibleInterviews = interviews.filter((interview) => candidates.some((candidate) => candidate.id === interview.candidateId));
   return table([
     { label: "応募者", render: (row) => escapeHtml(candidates.find((candidate) => candidate.id === row.candidateId)?.name || "未設定") },
     { label: "募集区分", render: (row) => escapeHtml(jobTitle(candidates.find((candidate) => candidate.id === row.candidateId)?.jobId)) },
@@ -351,7 +358,7 @@ function interviewsPage() {
     { label: "面接日時", render: (row) => escapeHtml(formatDateTime(row.scheduledAt)) },
     { label: "面接担当", render: (row) => escapeHtml(row.interviewer) },
     { label: "形式", render: (row) => badge(row.format, row.format === "オンライン" ? "primary" : "success") }
-  ], interviews, false);
+  ], visibleInterviews, false);
 }
 
 function storesPage() {
@@ -407,6 +414,7 @@ function editModal() {
           ${textarea("メモ", "memo", "応募者に関するメモ", candidate.memo)}
           <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
             ${button("キャンセル", "secondary", "id=\"cancelEditCandidate\" type=\"button\"")}
+            ${button("削除", "danger", "id=\"deleteCandidateFromModal\" type=\"button\"")}
             ${button("保存", "primary", "type=\"submit\"")}
           </div>
         </form>
@@ -416,6 +424,7 @@ function editModal() {
 }
 
 function openEditModal(candidateId) {
+  if (!candidateId) return;
   editingCandidateId = candidateId;
   render();
 }
@@ -498,6 +507,20 @@ function deleteResume() {
   render();
 }
 
+function deleteCandidate(candidateId, message, showApplicantsPage = false) {
+  const candidate = candidates.find((item) => item.id === candidateId);
+  if (!candidate || !confirm(message)) return false;
+  candidates = candidates.filter((item) => item.id !== candidateId);
+  for (let index = interviews.length - 1; index >= 0; index -= 1) {
+    if (interviews[index].candidateId === candidateId) interviews.splice(index, 1);
+  }
+  saveCandidates();
+  editingCandidateId = "";
+  if (showApplicantsPage) activePage = "applicants";
+  render();
+  return true;
+}
+
 function render() {
   const pages = { dashboard: dashboardPage, applicants: applicantsPage, interviews: interviewsPage, stores: storesPage, analytics: analyticsPage, settings: () => emptyState("設定", "今後の機能追加用ページです。") };
   const titles = { dashboard: "ダッシュボード", applicants: "応募者", interviews: "面接", stores: "配属店舗", analytics: "分析", settings: "設定" };
@@ -531,6 +554,9 @@ function bindEvents() {
   bindCandidateRows();
   document.querySelector("#closeEditModal")?.addEventListener("click", closeEditModal);
   document.querySelector("#cancelEditCandidate")?.addEventListener("click", closeEditModal);
+  document.querySelector("#deleteCandidateFromModal")?.addEventListener("click", () => {
+    deleteCandidate(editingCandidateId, "この応募者を削除しますか？この操作は取り消せません。", true);
+  });
   document.querySelector("#editCandidateForm")?.addEventListener("submit", (event) => {
     event.preventDefault();
     updateCandidate(event.currentTarget);
@@ -566,9 +592,29 @@ function renderApplicantResults() {
 
 function bindCandidateRows() {
   document.querySelectorAll("[data-candidate-id]").forEach((row) => {
-    row.addEventListener("click", () => openEditModal(row.dataset.candidateId));
+    row.addEventListener("click", (event) => {
+      if (isInteractiveTarget(event.target)) return;
+      openEditModal(row.dataset.candidateId);
+    });
     row.addEventListener("keydown", (event) => {
+      if (isInteractiveTarget(event.target)) return;
       if (event.key === "Enter" || event.key === " ") openEditModal(row.dataset.candidateId);
+    });
+  });
+  document.querySelectorAll("[data-edit-button]").forEach((buttonElement) => {
+    buttonElement.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const candidateId = event.currentTarget.closest("[data-candidate-id]")?.dataset.candidateId;
+      if (candidateId) openEditModal(candidateId);
+    });
+  });
+  document.querySelectorAll("[data-delete-candidate-id]").forEach((buttonElement) => {
+    buttonElement.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const candidateId = event.currentTarget.dataset.deleteCandidateId;
+      const candidate = candidates.find((item) => item.id === candidateId);
+      if (!candidate) return;
+      deleteCandidate(candidateId, `${candidate.name}さんを削除しますか？`);
     });
   });
 }
