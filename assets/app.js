@@ -3,6 +3,7 @@ const APPLICATION_SOURCES = ["Indeed", "Airワーク", "グルメキャリー", 
 const CANDIDATE_STATUSES = ["応募受付", "書類選考", "面接調整中", "一次面接", "二次面接", "採用", "不採用", "辞退", "保留"];
 const HIRING_DECISIONS = ["採用", "保留", "不採用"];
 const RATING_OPTIONS = ["★★★★★", "★★★★☆", "★★★☆☆", "★★☆☆☆", "★☆☆☆☆"];
+const ALLOWED_RESUME_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const EVALUATION_ITEMS = [
   ["firstImpression", "第一印象"],
   ["smile", "笑顔"],
@@ -22,10 +23,10 @@ const jobs = [
   { id: "j6", title: "アルバイト（ホール）", location: "店舗", type: "アルバイト", status: "公開中" }
 ];
 const defaultCandidates = [
-  { id: "c1", name: "山田 太郎", email: "taro.yamada@example.com", phone: "", jobId: "j1", storeId: "s3", status: "一次面接", applicationSource: "Indeed", applicationSourceOther: "", appliedAt: "2026-07-05", interviewAt: "2026-07-06T14:00", interviewer: "山田", resumeName: "yamada_taro.pdf", interviewHistory: "", evaluation: "", evaluationRatings: { firstImpression: "★★★★★", smile: "★★★★★", communication: "★★★★☆", cleanliness: "★★★★★", restaurantExperience: "★★★★☆", sushiExperience: "★★☆☆☆", foreignLanguage: "★★★★☆" }, hiringDecision: "保留", memo: "" },
-  { id: "c2", name: "佐藤 花子", email: "hanako.sato@example.com", phone: "", jobId: "j3", storeId: "s2", status: "面接調整中", applicationSource: "Instagram", applicationSourceOther: "", appliedAt: "2026-07-05", interviewAt: "", interviewer: "鈴木", resumeName: "sato_hanako.pdf", interviewHistory: "", evaluation: "", evaluationRatings: {}, hiringDecision: "保留", memo: "" },
-  { id: "c3", name: "鈴木 一郎", email: "ichiro.suzuki@example.com", phone: "", jobId: "j6", storeId: "s1", status: "採用", applicationSource: "Airワーク", applicationSourceOther: "", appliedAt: "2026-06-20", interviewAt: "2026-07-05T10:00", interviewer: "中村", resumeName: "suzuki_ichiro.pdf", interviewHistory: "", evaluation: "", evaluationRatings: {}, hiringDecision: "採用", memo: "" },
-  { id: "c4", name: "高橋 美咲", email: "misaki.takahashi@example.com", phone: "", jobId: "j2", storeId: "s3", status: "応募受付", applicationSource: "紹介", applicationSourceOther: "", appliedAt: "2026-07-02", interviewAt: "", interviewer: "", resumeName: "takahashi_misaki.pdf", interviewHistory: "", evaluation: "", evaluationRatings: {}, hiringDecision: "保留", memo: "" }
+  { id: "c1", name: "山田 太郎", email: "taro.yamada@example.com", phone: "", jobId: "j1", storeId: "s3", status: "一次面接", applicationSource: "Indeed", applicationSourceOther: "", appliedAt: "2026-07-05", interviewAt: "2026-07-06T14:00", interviewer: "山田", resumeName: "", resume: null, interviewHistory: "", evaluation: "", evaluationRatings: { firstImpression: "★★★★★", smile: "★★★★★", communication: "★★★★☆", cleanliness: "★★★★★", restaurantExperience: "★★★★☆", sushiExperience: "★★☆☆☆", foreignLanguage: "★★★★☆" }, hiringDecision: "保留", memo: "" },
+  { id: "c2", name: "佐藤 花子", email: "hanako.sato@example.com", phone: "", jobId: "j3", storeId: "s2", status: "面接調整中", applicationSource: "Instagram", applicationSourceOther: "", appliedAt: "2026-07-05", interviewAt: "", interviewer: "鈴木", resumeName: "", resume: null, interviewHistory: "", evaluation: "", evaluationRatings: {}, hiringDecision: "保留", memo: "" },
+  { id: "c3", name: "鈴木 一郎", email: "ichiro.suzuki@example.com", phone: "", jobId: "j6", storeId: "s1", status: "採用", applicationSource: "Airワーク", applicationSourceOther: "", appliedAt: "2026-06-20", interviewAt: "2026-07-05T10:00", interviewer: "中村", resumeName: "", resume: null, interviewHistory: "", evaluation: "", evaluationRatings: {}, hiringDecision: "採用", memo: "" },
+  { id: "c4", name: "高橋 美咲", email: "misaki.takahashi@example.com", phone: "", jobId: "j2", storeId: "s3", status: "応募受付", applicationSource: "紹介", applicationSourceOther: "", appliedAt: "2026-07-02", interviewAt: "", interviewer: "", resumeName: "", resume: null, interviewHistory: "", evaluation: "", evaluationRatings: {}, hiringDecision: "保留", memo: "" }
 ];
 const interviews = [
   { id: "i1", candidateId: "c1", scheduledAt: "2026-07-05T14:00", interviewer: "山田", format: "オンライン" },
@@ -56,6 +57,8 @@ function loadCandidates() {
     evaluation: candidate.evaluation || "",
     evaluationRatings: normalizeEvaluationRatings(candidate.evaluationRatings),
     hiringDecision: normalizeHiringDecision(candidate.hiringDecision || inferHiringDecision(candidate.status)),
+    resumeName: candidate.resume?.fileName || "",
+    resume: normalizeResume(candidate.resume),
     memo: candidate.memo || ""
   }));
 }
@@ -163,6 +166,16 @@ function normalizeEvaluationRatings(ratings = {}) {
   }, {});
 }
 
+function normalizeResume(resume) {
+  if (!resume || !resume.dataUrl) return null;
+  return {
+    fileName: resume.fileName || "履歴書",
+    fileType: resume.fileType || "application/octet-stream",
+    uploadedAt: resume.uploadedAt || new Date().toISOString(),
+    dataUrl: resume.dataUrl
+  };
+}
+
 function defaultInterviewHistory(candidate) {
   if (!candidate.interviewAt) return "";
   const interviewer = candidate.interviewer ? `（担当: ${candidate.interviewer}）` : "";
@@ -185,6 +198,10 @@ function formatDateTime(value) {
 function formatTime(value) {
   if (!value) return "";
   return new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value));
+}
+
+function formatUploadedAt(value) {
+  return value ? formatDateTime(value) : "未登録";
 }
 
 function isToday(value) {
@@ -237,6 +254,7 @@ function applicantTable(rows) {
     { label: "募集区分", render: (row) => escapeHtml(jobTitle(row.jobId)) },
     { label: "希望店舗", render: (row) => escapeHtml(storeName(row.storeId)) },
     { label: "応募媒体", render: (row) => badge(sourceLabel(row), "primary") },
+    { label: "履歴書", render: (row) => row.resume ? badge("履歴書あり", "success") : `<span class="text-slate-400">未登録</span>` },
     { label: "選考状況", render: (row) => badge(row.status, statusTone(row.status)) },
     { label: "", render: () => `<button class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50" data-edit-button type="button">✎ 編集</button>` }
   ], rows, true);
@@ -255,11 +273,11 @@ function todayInterviews() {
 function todoStats() {
   const interviewDateUnset = candidates.filter((candidate) => ["面接調整中", "一次面接", "二次面接"].includes(candidate.status) && !candidate.interviewAt).length;
   const resultPending = candidates.filter((candidate) => ["一次面接", "二次面接"].includes(candidate.status) && candidate.interviewAt && new Date(candidate.interviewAt) < new Date()).length;
-  const resumeUnchecked = candidates.filter((candidate) => !candidate.resumeName).length;
+  const resumeUnchecked = candidates.filter((candidate) => !candidate.resume).length;
   return [
     { label: "面接日未設定", count: interviewDateUnset },
     { label: "合否連絡待ち", count: resultPending },
-    { label: "履歴書未確認", count: resumeUnchecked || 4 },
+    { label: "履歴書未確認", count: resumeUnchecked },
     { label: "保管期限7日以内", count: 1 }
   ];
 }
@@ -283,6 +301,39 @@ function todayActionPanel() {
       </section>
     </div>
   `);
+}
+
+function resumeSection(candidate) {
+  const resume = candidate.resume;
+  const resumeDetails = resume
+    ? `<div class="grid gap-2 rounded-xl border border-slate-100 bg-white p-3 text-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p class="font-semibold text-slate-950">${escapeHtml(resume.fileName)}</p>
+            <p class="mt-1 text-xs text-slate-500">アップロード日時: ${escapeHtml(formatUploadedAt(resume.uploadedAt))}</p>
+          </div>
+          ${badge("登録済み", "success")}
+        </div>
+        <div class="flex flex-wrap gap-2 pt-1">
+          <a href="${escapeHtml(resume.dataUrl)}" target="_blank" rel="noopener" class="inline-flex min-h-9 items-center justify-center rounded-xl bg-white px-3 text-xs font-semibold text-blue-700 ring-1 ring-slate-200 transition hover:bg-blue-50">プレビュー</a>
+          <a href="${escapeHtml(resume.dataUrl)}" download="${escapeHtml(resume.fileName)}" class="inline-flex min-h-9 items-center justify-center rounded-xl bg-white px-3 text-xs font-semibold text-blue-700 ring-1 ring-slate-200 transition hover:bg-blue-50">ダウンロード</a>
+          <button id="deleteResume" type="button" class="inline-flex min-h-9 items-center justify-center rounded-xl bg-red-50 px-3 text-xs font-semibold text-red-700 transition hover:bg-red-100">削除</button>
+        </div>
+      </div>`
+    : `<p class="rounded-xl border border-dashed border-slate-200 bg-white p-3 text-sm text-slate-500">履歴書は未登録です。</p>`;
+  return `
+    <section class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+      <h3 class="text-sm font-semibold text-slate-700">履歴書</h3>
+      <div class="mt-3 grid gap-3">
+        ${resumeDetails}
+        <label id="resumeDropZone" class="grid cursor-pointer place-items-center rounded-xl border border-dashed border-slate-300 bg-white p-5 text-center text-sm text-slate-600 transition hover:border-blue-300 hover:bg-blue-50/50">
+          <span class="font-semibold text-slate-700">PDF / JPG / PNG を選択またはドロップ</span>
+          <span class="mt-1 text-xs text-slate-500">アップロード後、応募者データに一時保存されます。</span>
+          <input id="resumeUpload" type="file" accept="application/pdf,image/jpeg,image/png" class="sr-only" />
+        </label>
+      </div>
+    </section>
+  `;
 }
 
 function applicantsPage() {
@@ -352,6 +403,7 @@ function editModal() {
             <h3 class="text-sm font-semibold text-slate-700">評価</h3>
             <div class="mt-3 grid gap-3 sm:grid-cols-2">${evaluationFields}</div>
           </section>
+          ${resumeSection(candidate)}
           ${textarea("メモ", "memo", "応募者に関するメモ", candidate.memo)}
           <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
             ${button("キャンセル", "secondary", "id=\"cancelEditCandidate\" type=\"button\"")}
@@ -402,6 +454,50 @@ function updateCandidate(form) {
   render();
 }
 
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(String(reader.result)));
+    reader.addEventListener("error", reject);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadResume(file) {
+  const candidate = candidates.find((item) => item.id === editingCandidateId);
+  if (!candidate || !file) return;
+  if (!ALLOWED_RESUME_TYPES.includes(file.type)) {
+    alert("PDF、JPG、PNG のいずれかを選択してください。");
+    return;
+  }
+  const previousResume = candidate.resume;
+  try {
+    const dataUrl = await readFileAsDataUrl(file);
+    candidate.resume = {
+      fileName: file.name,
+      fileType: file.type,
+      uploadedAt: new Date().toISOString(),
+      dataUrl
+    };
+    candidate.resumeName = file.name;
+    saveCandidates();
+    render();
+  } catch (error) {
+    candidate.resume = previousResume;
+    alert("履歴書の保存に失敗しました。ファイルサイズを小さくして再度お試しください。");
+  }
+}
+
+function deleteResume() {
+  const candidate = candidates.find((item) => item.id === editingCandidateId);
+  if (!candidate || !candidate.resume) return;
+  if (!confirm("履歴書を削除しますか？")) return;
+  candidate.resume = null;
+  candidate.resumeName = "";
+  saveCandidates();
+  render();
+}
+
 function render() {
   const pages = { dashboard: dashboardPage, applicants: applicantsPage, interviews: interviewsPage, stores: storesPage, analytics: analyticsPage, settings: () => emptyState("設定", "今後の機能追加用ページです。") };
   const titles = { dashboard: "ダッシュボード", applicants: "応募者", interviews: "面接", stores: "配属店舗", analytics: "分析", settings: "設定" };
@@ -441,6 +537,23 @@ function bindEvents() {
   });
   document.querySelector("#editCandidateForm select[name='applicationSource']")?.addEventListener("change", (event) => {
     document.querySelector("#otherSourceField")?.classList.toggle("hidden", event.currentTarget.value !== "その他");
+  });
+  document.querySelector("#resumeUpload")?.addEventListener("change", (event) => {
+    uploadResume(event.currentTarget.files?.[0]);
+  });
+  document.querySelector("#deleteResume")?.addEventListener("click", deleteResume);
+  const dropZone = document.querySelector("#resumeDropZone");
+  dropZone?.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    dropZone.classList.add("border-blue-400", "bg-blue-50");
+  });
+  dropZone?.addEventListener("dragleave", () => {
+    dropZone.classList.remove("border-blue-400", "bg-blue-50");
+  });
+  dropZone?.addEventListener("drop", (event) => {
+    event.preventDefault();
+    dropZone.classList.remove("border-blue-400", "bg-blue-50");
+    uploadResume(event.dataTransfer?.files?.[0]);
   });
 }
 
