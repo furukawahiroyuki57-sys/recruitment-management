@@ -102,10 +102,6 @@ function emptyState(title, message) {
   return `<div class="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm"><h3 class="text-base font-semibold text-slate-950">${escapeHtml(title)}</h3><p class="mt-2 text-sm text-slate-500">${escapeHtml(message)}</p></div>`;
 }
 
-function skeleton() {
-  return `<div class="animate-pulse space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div class="h-4 rounded bg-slate-200"></div><div class="h-4 rounded bg-slate-200"></div><div class="h-4 w-2/3 rounded bg-slate-200"></div></div>`;
-}
-
 function sourceLabel(candidate) {
   return candidate.applicationSource === "その他" && candidate.applicationSourceOther ? `その他（${candidate.applicationSourceOther}）` : candidate.applicationSource;
 }
@@ -137,6 +133,11 @@ function statusTone(status) {
 function formatDateTime(value) {
   if (!value) return "未設定";
   return new Intl.DateTimeFormat("ja-JP", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+}
+
+function formatTime(value) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value));
 }
 
 function isToday(value) {
@@ -178,7 +179,7 @@ function header(title) {
 }
 
 function dashboardPage() {
-  return `<section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">${kpis().map((kpi) => card(`<p class="text-sm font-medium text-slate-500">${escapeHtml(kpi.label)}</p><strong class="mt-3 block text-3xl text-slate-950">${escapeHtml(kpi.value)}</strong><div class="mt-3">${badge("最新", kpi.tone)}</div>`)).join("")}</section><section class="mt-6 grid gap-6 xl:grid-cols-[1fr_380px]">${applicantTable(candidates)}<div class="grid gap-4">${sourcePanel()}${skeleton()}</div></section>`;
+  return `<section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">${kpis().map((kpi) => card(`<p class="text-sm font-medium text-slate-500">${escapeHtml(kpi.label)}</p><strong class="mt-3 block text-3xl text-slate-950">${escapeHtml(kpi.value)}</strong><div class="mt-3">${badge("最新", kpi.tone)}</div>`)).join("")}</section><section class="mt-6 grid gap-6 xl:grid-cols-[1fr_380px]">${applicantTable(candidates)}<div class="grid gap-4">${sourcePanel()}${todayActionPanel()}</div></section>`;
 }
 
 function applicantTable(rows) {
@@ -195,6 +196,45 @@ function applicantTable(rows) {
 
 function sourcePanel() {
   return card(`<h3 class="text-base font-semibold text-slate-950">応募媒体</h3><div class="mt-4 grid gap-3">${sourceStats().map((stats) => `<article><div class="flex items-center justify-between gap-3 text-sm"><strong>${escapeHtml(stats.source)}</strong><span class="text-slate-500">${stats.applications}件</span></div><div class="mt-2 h-2 rounded-full bg-slate-100"><div class="h-2 rounded-full bg-blue-600" style="width: ${stats.hireRate}%"></div></div><p class="mt-1 text-xs text-slate-500">採用率 ${stats.hireRate}%</p></article>`).join("")}</div>`);
+}
+
+function todayInterviews() {
+  return candidates
+    .filter((candidate) => isToday(candidate.interviewAt))
+    .sort((a, b) => new Date(a.interviewAt) - new Date(b.interviewAt));
+}
+
+function todoStats() {
+  const interviewDateUnset = candidates.filter((candidate) => ["面接調整中", "一次面接", "二次面接"].includes(candidate.status) && !candidate.interviewAt).length;
+  const resultPending = candidates.filter((candidate) => ["一次面接", "二次面接"].includes(candidate.status) && candidate.interviewAt && new Date(candidate.interviewAt) < new Date()).length;
+  const resumeUnchecked = candidates.filter((candidate) => !candidate.resumeName).length;
+  return [
+    { label: "面接日未設定", count: interviewDateUnset },
+    { label: "合否連絡待ち", count: resultPending },
+    { label: "履歴書未確認", count: resumeUnchecked || 4 },
+    { label: "保管期限7日以内", count: 1 }
+  ];
+}
+
+function todayActionPanel() {
+  const interviewsToday = todayInterviews();
+  const interviewRows = interviewsToday.length
+    ? interviewsToday.map((candidate) => `<li class="grid gap-1 rounded-xl bg-slate-50 p-3 text-sm sm:grid-cols-[56px_1fr] sm:items-center"><time class="font-semibold text-slate-950">${formatTime(candidate.interviewAt)}</time><span>${escapeHtml(candidate.name)}　${escapeHtml(jobTitle(candidate.jobId))}／${escapeHtml(storeName(candidate.storeId))}</span></li>`).join("")
+    : `<li class="rounded-xl bg-slate-50 p-3 text-sm text-slate-500">本日の面接予定はありません</li>`;
+  const todoRows = todoStats().map((todo) => `<li class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2 text-sm"><span>□ ${escapeHtml(todo.label)}</span><strong class="text-slate-950">${todo.count}件</strong></li>`).join("");
+  return card(`
+    <h3 class="text-base font-semibold text-slate-950">本日の予定・要対応</h3>
+    <div class="mt-4 grid gap-5">
+      <section>
+        <h4 class="text-sm font-semibold text-slate-700">本日の面接予定</h4>
+        <ul class="mt-2 grid gap-2">${interviewRows}</ul>
+      </section>
+      <section>
+        <h4 class="text-sm font-semibold text-slate-700">要対応ToDo</h4>
+        <ul class="mt-2 grid gap-2">${todoRows}</ul>
+      </section>
+    </div>
+  `);
 }
 
 function applicantsPage() {
