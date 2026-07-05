@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recruitment Management System Ver2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#2563EB",
+              success: "#22C55E",
+              warning: "#F59E0B",
+              danger: "#EF4444",
+              surface: "#F8FAFC"
+            }
+          }
+        }
+      };
+    </script>
+  </head>
+  <body class="bg-surface text-slate-900 antialiased">
+    <div id="app"></div>
+    <script type="module" src="./assets/app.js"></script>
+  </body>
+</html>
