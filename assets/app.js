@@ -42,7 +42,7 @@ const stores = [
 
 let activePage = "dashboard";
 let editingCandidateId = "";
-let filters = { query: "", source: "all" };
+let filters = { query: "", source: "all", todo: "all" };
 let candidates = loadCandidates();
 
 function loadCandidates() {
@@ -245,6 +245,24 @@ function kpis() {
   ];
 }
 
+function todoDefinitions() {
+  return [
+    { key: "unhandled", label: "未対応", matches: (candidate) => ["応募受付", "書類選考"].includes(candidate.status) },
+    { key: "unscheduledInterview", label: "面接日未設定", matches: (candidate) => candidate.status === "面接調整中" && !candidate.interviewAt },
+    { key: "resultPending", label: "合否連絡待ち", matches: (candidate) => ["一次面接", "二次面接"].includes(candidate.status) }
+  ];
+}
+
+function todoLabel(key) {
+  return todoDefinitions().find((todo) => todo.key === key)?.label || "";
+}
+
+function matchesTodoFilter(candidate) {
+  if (filters.todo === "all") return true;
+  const todo = todoDefinitions().find((item) => item.key === filters.todo);
+  return todo ? todo.matches(candidate) : true;
+}
+
 function filteredCandidates() {
   const query = filters.query.trim().toLowerCase();
   return candidates.filter((candidate) => {
@@ -252,7 +270,7 @@ function filteredCandidates() {
     const haystack = `${candidate.name} ${candidate.email} ${candidate.phone} ${jobTitle(candidate.jobId)} ${storeName(candidate.storeId)} ${sourceLabel(candidate)} ${candidate.status} ${candidate.evaluation} ${ratingText} ${candidate.hiringDecision} ${candidate.overallRating} ${candidate.memo}`.toLowerCase();
     const queryMatches = !query || haystack.includes(query);
     const sourceMatches = filters.source === "all" || candidate.applicationSource === filters.source;
-    return queryMatches && sourceMatches;
+    return queryMatches && sourceMatches && matchesTodoFilter(candidate);
   });
 }
 
@@ -297,15 +315,11 @@ function todayInterviews() {
 }
 
 function todoStats() {
-  const interviewDateUnset = candidates.filter((candidate) => ["面接調整中", "一次面接", "二次面接"].includes(candidate.status) && !candidate.interviewAt).length;
-  const resultPending = candidates.filter((candidate) => ["一次面接", "二次面接"].includes(candidate.status) && candidate.interviewAt && new Date(candidate.interviewAt) < new Date()).length;
-  const resumeUnchecked = candidates.filter((candidate) => !candidate.resume).length;
-  return [
-    { label: "面接日未設定", count: interviewDateUnset },
-    { label: "合否連絡待ち", count: resultPending },
-    { label: "履歴書未確認", count: resumeUnchecked },
-    { label: "保管期限7日以内", count: 1 }
-  ];
+  return todoDefinitions().map((todo) => ({
+    key: todo.key,
+    label: todo.label,
+    count: candidates.filter(todo.matches).length
+  }));
 }
 
 function todayActionPanel() {
@@ -313,7 +327,7 @@ function todayActionPanel() {
   const interviewRows = interviewsToday.length
     ? interviewsToday.map((candidate) => `<li class="grid gap-1 rounded-xl bg-slate-50 p-3 text-sm sm:grid-cols-[56px_1fr] sm:items-center"><time class="font-semibold text-slate-950">${formatTime(candidate.interviewAt)}</time><span>${escapeHtml(candidate.name)}　${escapeHtml(jobTitle(candidate.jobId))}／${escapeHtml(storeName(candidate.storeId))}</span></li>`).join("")
     : `<li class="rounded-xl bg-slate-50 p-3 text-sm text-slate-500">本日の面接予定はありません</li>`;
-  const todoRows = todoStats().map((todo) => `<li class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2 text-sm"><span>□ ${escapeHtml(todo.label)}</span><strong class="text-slate-950">${todo.count}件</strong></li>`).join("");
+  const todoRows = todoStats().map((todo) => `<li class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2 text-sm"><span>□ ${escapeHtml(todo.label)}</span><button class="rounded-lg px-2 py-1 text-sm font-bold text-blue-700 transition hover:bg-blue-50" type="button" data-todo-filter="${escapeHtml(todo.key)}" aria-label="${escapeHtml(todo.label)}の応募者を表示">${todo.count}件</button></li>`).join("");
   return card(`
     <h3 class="text-base font-semibold text-slate-950">本日の予定・要対応</h3>
     <div class="mt-4 grid gap-5">
@@ -362,11 +376,33 @@ function resumeSection(candidate) {
   `;
 }
 
+function contactMessageSection() {
+  return `
+    <section class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h3 class="text-sm font-semibold text-slate-700">連絡文作成</h3>
+        <span id="copyMessageStatus" class="text-xs font-semibold text-green-700" aria-live="polite"></span>
+      </div>
+      <div class="mt-3 grid gap-2 sm:grid-cols-4">
+        <button class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-blue-50 hover:text-blue-700" type="button" data-message-template="interview">面接案内</button>
+        <button class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-green-50 hover:text-green-700" type="button" data-message-template="hire">採用通知</button>
+        <button class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50 hover:text-red-700" type="button" data-message-template="reject">不採用通知</button>
+        <button class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100" type="button" data-message-template="hold">保留連絡</button>
+      </div>
+      <label class="mt-3 grid gap-1.5 text-sm font-medium text-slate-600">生成文<textarea id="contactMessage" rows="8" class="min-h-40 resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100" placeholder="テンプレートを選択すると連絡文が生成されます。"></textarea></label>
+      <div class="mt-3 flex justify-end">
+        <button id="copyContactMessage" class="inline-flex min-h-10 items-center justify-center rounded-xl bg-white px-4 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50" type="button">コピーする</button>
+      </div>
+    </section>
+  `;
+}
+
 function applicantsPage() {
   const sourceOptions = APPLICATION_SOURCES.map((source) => ({ label: source, value: source }));
   const jobOptions = jobs.map((job) => ({ label: job.title, value: job.id }));
   const storeOptions = stores.map((store) => ({ label: store.name, value: store.id }));
-  return `<section class="grid gap-6 xl:grid-cols-[1fr_380px]"><div><div class="mb-4 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px]">${input("検索", "search", "氏名・募集区分・希望店舗・媒体・選考状況", "text", filters.query)}${select("応募媒体", "source", [{ label: "すべて", value: "all" }, ...sourceOptions], filters.source)}</div><div id="applicantResults">${applicantTable(filteredCandidates())}</div></div>${card(`<h3 class="text-base font-semibold text-slate-950">応募者登録</h3><form class="mt-4 grid gap-4">${input("氏名", "name", "山田 太郎")}${input("電話番号", "phone", "090-0000-0000", "tel")}${input("メール", "email", "example@company.com", "email")}${select("募集区分", "jobId", jobOptions)}${select("希望店舗", "storeId", storeOptions)}${select("応募媒体", "applicationSource", sourceOptions)}${input("その他媒体名", "applicationSourceOther", "その他を選択した場合のみ使用")}${button("応募者を保存", "primary")}</form>`)}</section>`;
+  const todoFilterChip = filters.todo === "all" ? "" : `<div class="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800"><strong>ToDo: ${escapeHtml(todoLabel(filters.todo))}</strong><button id="clearTodoFilter" class="rounded-lg bg-white px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-100" type="button">解除</button></div>`;
+  return `<section class="grid gap-6 xl:grid-cols-[1fr_380px]"><div><div class="mb-4 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px]">${input("検索", "search", "氏名・募集区分・希望店舗・媒体・選考状況", "text", filters.query)}${select("応募媒体", "source", [{ label: "すべて", value: "all" }, ...sourceOptions], filters.source)}</div>${todoFilterChip}<div id="applicantResults">${applicantTable(filteredCandidates())}</div></div>${card(`<h3 class="text-base font-semibold text-slate-950">応募者登録</h3><form class="mt-4 grid gap-4">${input("氏名", "name", "山田 太郎")}${input("電話番号", "phone", "090-0000-0000", "tel")}${input("メール", "email", "example@company.com", "email")}${select("募集区分", "jobId", jobOptions)}${select("希望店舗", "storeId", storeOptions)}${select("応募媒体", "applicationSource", sourceOptions)}${input("その他媒体名", "applicationSourceOther", "その他を選択した場合のみ使用")}${button("応募者を保存", "primary")}</form>`)}</section>`;
 }
 
 function interviewsPage() {
@@ -433,6 +469,7 @@ function editModal() {
             <div class="mt-3 grid gap-3 sm:grid-cols-2">${evaluationFields}</div>
           </section>
           ${resumeSection(candidate)}
+          ${contactMessageSection()}
           ${textarea("メモ", "memo", "応募者に関するメモ", candidate.memo)}
           <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
             ${button("キャンセル", "secondary", "id=\"cancelEditCandidate\" type=\"button\"")}
@@ -484,6 +521,57 @@ function updateCandidate(form) {
   saveCandidates();
   editingCandidateId = "";
   render();
+}
+
+function messageContext(candidate) {
+  return {
+    name: candidate.name || "応募者",
+    job: jobTitle(candidate.jobId),
+    store: storeName(candidate.storeId),
+    interviewAt: candidate.interviewAt ? formatDateTime(candidate.interviewAt) : ""
+  };
+}
+
+function currentModalCandidate(candidate) {
+  const form = document.querySelector("#editCandidateForm");
+  if (!form) return candidate;
+  const data = new FormData(form);
+  return {
+    ...candidate,
+    name: String(data.get("name")).trim() || candidate.name,
+    jobId: String(data.get("jobId") || candidate.jobId),
+    storeId: String(data.get("storeId") || candidate.storeId)
+  };
+}
+
+function generateContactMessage(candidate, templateType) {
+  const context = messageContext(candidate);
+  const interviewLine = context.interviewAt ? `\n面接日時：${context.interviewAt}` : "";
+  const baseInfo = `\n募集区分：${context.job}\n配属店舗：${context.store}${interviewLine}`;
+  const templates = {
+    interview: `${context.name} 様\n\nこの度は${context.store}の${context.job}へご応募いただき、誠にありがとうございます。\n面接についてご案内いたします。${baseInfo}\n\nご都合が悪い場合は、お手数ですがご返信ください。\n当日お会いできますことを楽しみにしております。\n\n採用担当`,
+    hire: `${context.name} 様\n\nこの度は${context.store}の${context.job}選考にご参加いただき、誠にありがとうございました。\n選考の結果、ぜひ採用としてお迎えしたくご連絡いたしました。${baseInfo}\n\n今後の勤務開始日や必要書類について、改めてご案内いたします。\n引き続きどうぞよろしくお願いいたします。\n\n採用担当`,
+    reject: `${context.name} 様\n\nこの度は${context.store}の${context.job}へご応募いただき、誠にありがとうございました。\n慎重に選考いたしました結果、誠に残念ながら今回はご希望に添えない結果となりました。${baseInfo}\n\n貴重なお時間をいただきましたこと、心より御礼申し上げます。\n${context.name}様の今後のご活躍をお祈り申し上げます。\n\n採用担当`,
+    hold: `${context.name} 様\n\nこの度は${context.store}の${context.job}選考にご参加いただき、誠にありがとうございます。\n現在、選考結果について社内で確認を進めております。${baseInfo}\n\n結果のご連絡まで今しばらくお待ちいただけますでしょうか。\nお待たせして恐れ入りますが、何卒よろしくお願いいたします。\n\n採用担当`
+  };
+  return templates[templateType] || "";
+}
+
+function setCopyMessageStatus(message) {
+  const status = document.querySelector("#copyMessageStatus");
+  if (status) status.textContent = message;
+}
+
+async function copyContactMessage() {
+  const textareaElement = document.querySelector("#contactMessage");
+  if (!textareaElement?.value.trim()) return;
+  try {
+    await navigator.clipboard.writeText(textareaElement.value);
+  } catch (error) {
+    textareaElement.select();
+    document.execCommand("copy");
+  }
+  setCopyMessageStatus("コピーしました");
 }
 
 function readFileAsDataUrl(file) {
@@ -574,6 +662,18 @@ function bindEvents() {
     filters = { ...filters, source: event.currentTarget.value };
     renderApplicantResults();
   });
+  document.querySelector("#clearTodoFilter")?.addEventListener("click", () => {
+    filters = { ...filters, todo: "all" };
+    render();
+  });
+  document.querySelectorAll("[data-todo-filter]").forEach((buttonElement) => {
+    buttonElement.addEventListener("click", () => {
+      filters = { ...filters, todo: buttonElement.dataset.todoFilter, query: "" };
+      activePage = "applicants";
+      editingCandidateId = "";
+      render();
+    });
+  });
   bindCandidateRows();
   document.querySelector("#closeEditModal")?.addEventListener("click", closeEditModal);
   document.querySelector("#cancelEditCandidate")?.addEventListener("click", closeEditModal);
@@ -587,6 +687,16 @@ function bindEvents() {
   document.querySelector("#editCandidateForm select[name='applicationSource']")?.addEventListener("change", (event) => {
     document.querySelector("#otherSourceField")?.classList.toggle("hidden", event.currentTarget.value !== "その他");
   });
+  document.querySelectorAll("[data-message-template]").forEach((buttonElement) => {
+    buttonElement.addEventListener("click", () => {
+      const candidate = candidates.find((item) => item.id === editingCandidateId);
+      const textareaElement = document.querySelector("#contactMessage");
+      if (!candidate || !textareaElement) return;
+      textareaElement.value = generateContactMessage(currentModalCandidate(candidate), buttonElement.dataset.messageTemplate);
+      setCopyMessageStatus("");
+    });
+  });
+  document.querySelector("#copyContactMessage")?.addEventListener("click", copyContactMessage);
   document.querySelector("#resumeUpload")?.addEventListener("change", (event) => {
     uploadResume(event.currentTarget.files?.[0]);
   });
