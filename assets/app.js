@@ -261,7 +261,7 @@ function applicantTable(rows) {
     { label: "応募媒体", render: (row) => badge(sourceLabel(row), "primary") },
     { label: "履歴書", render: (row) => row.resume ? badge("履歴書あり", "success") : `<span class="text-slate-400">未登録</span>` },
     { label: "選考状況", render: (row) => badge(row.status, statusTone(row.status)) },
-    { label: "操作", render: (row) => `<div class="flex flex-wrap gap-2"><button class="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50" data-delete-candidate-id="${escapeHtml(row.id)}" type="button" aria-label="${escapeHtml(row.name)}を削除"><span aria-hidden="true">🗑</span><span>削除</span></button><button class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50" data-edit-button type="button">✎ 編集</button></div>` }
+    { label: "操作", render: (row) => `<div class="flex flex-wrap gap-2"><button class="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50" data-delete-applicant-id="${escapeHtml(row.id)}" type="button" aria-label="${escapeHtml(row.name)}を削除"><span aria-hidden="true">🗑</span><span>削除</span></button><button class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50" data-edit-button type="button">✎ 編集</button></div>` }
   ], rows, true);
 }
 
@@ -413,7 +413,7 @@ function editModal() {
           ${textarea("メモ", "memo", "応募者に関するメモ", candidate.memo)}
           <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
             ${button("キャンセル", "secondary", "id=\"cancelEditCandidate\" type=\"button\"")}
-            ${button("削除", "danger", "id=\"deleteCandidateFromModal\" type=\"button\"")}
+            ${button("削除", "danger", "id=\"deleteApplicantFromModal\" type=\"button\"")}
             ${button("保存", "primary", "type=\"submit\"")}
           </div>
         </form>
@@ -506,12 +506,12 @@ function deleteResume() {
   render();
 }
 
-function deleteCandidate(candidateId, message, showApplicantsPage = false) {
-  const candidate = candidates.find((item) => item.id === candidateId);
-  if (!candidate || !confirm(message)) return false;
-  candidates = candidates.filter((item) => item.id !== candidateId);
+function deleteApplicant(applicantId, showApplicantsPage = false) {
+  const applicant = candidates.find((item) => item.id === applicantId);
+  if (!applicant || !confirm("この応募者を削除しますか？")) return false;
+  candidates = candidates.filter((item) => item.id !== applicantId);
   for (let index = interviews.length - 1; index >= 0; index -= 1) {
-    if (interviews[index].candidateId === candidateId) interviews.splice(index, 1);
+    if (interviews[index].candidateId === applicantId) interviews.splice(index, 1);
   }
   saveCandidates();
   editingCandidateId = "";
@@ -553,8 +553,8 @@ function bindEvents() {
   bindCandidateRows();
   document.querySelector("#closeEditModal")?.addEventListener("click", closeEditModal);
   document.querySelector("#cancelEditCandidate")?.addEventListener("click", closeEditModal);
-  document.querySelector("#deleteCandidateFromModal")?.addEventListener("click", () => {
-    deleteCandidate(editingCandidateId, "この応募者を削除しますか？", true);
+  document.querySelector("#deleteApplicantFromModal")?.addEventListener("click", () => {
+    deleteApplicant(editingCandidateId, true);
   });
   document.querySelector("#editCandidateForm")?.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -607,13 +607,10 @@ function bindCandidateRows() {
       if (candidateId) openEditModal(candidateId);
     });
   });
-  document.querySelectorAll("[data-delete-candidate-id]").forEach((buttonElement) => {
+  document.querySelectorAll("[data-delete-applicant-id]").forEach((buttonElement) => {
     buttonElement.addEventListener("click", (event) => {
       event.stopPropagation();
-      const candidateId = event.currentTarget.dataset.deleteCandidateId;
-      const candidate = candidates.find((item) => item.id === candidateId);
-      if (!candidate) return;
-      deleteCandidate(candidateId, "この応募者を削除しますか？");
+      deleteApplicant(event.currentTarget.dataset.deleteApplicantId);
     });
   });
 }
