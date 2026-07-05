@@ -1,6 +1,6 @@
 # Recruitment Management System Ver2
 
-This repository is configured for GitHub Pages static hosting from `main / root`.
+This repository is configured for GitHub Pages static hosting through GitHub Actions.
 
 No build step is required for deployment.
 
@@ -8,14 +8,13 @@ No build step is required for deployment.
 
 GitHub Pages should be configured as:
 
-- Source: `Deploy from a branch`
-- Branch: `main`
-- Folder: `/ (root)`
+- Source: `GitHub Actions`
 
 The published files are:
 
 - `index.html`
 - `assets/app.js`
+- `styles.css`
 - `.nojekyll`
 
 `index.html` loads the app with:
@@ -25,6 +24,8 @@ The published files are:
 ```
 
 Because the app is loaded directly from `assets/app.js`, Vite, pnpm, TypeScript, and ESLint are not required for Pages deployment.
+
+Deployment is handled by `.github/workflows/deploy.yml` using `actions/upload-pages-artifact` and `actions/deploy-pages`.
 
 ## Source Notes
 
