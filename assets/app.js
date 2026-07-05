@@ -261,8 +261,7 @@ function applicantTable(rows) {
     { label: "応募媒体", render: (row) => badge(sourceLabel(row), "primary") },
     { label: "履歴書", render: (row) => row.resume ? badge("履歴書あり", "success") : `<span class="text-slate-400">未登録</span>` },
     { label: "選考状況", render: (row) => badge(row.status, statusTone(row.status)) },
-    { label: "", render: (row) => `<button class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50" data-delete-candidate-id="${escapeHtml(row.id)}" type="button">削除</button>` },
-    { label: "", render: () => `<button class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50" data-edit-button type="button">✎ 編集</button>` }
+    { label: "操作", render: (row) => `<div class="flex flex-wrap gap-2"><button class="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50" data-delete-candidate-id="${escapeHtml(row.id)}" type="button" aria-label="${escapeHtml(row.name)}を削除"><span aria-hidden="true">🗑</span><span>削除</span></button><button class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50" data-edit-button type="button">✎ 編集</button></div>` }
   ], rows, true);
 }
 
@@ -555,7 +554,7 @@ function bindEvents() {
   document.querySelector("#closeEditModal")?.addEventListener("click", closeEditModal);
   document.querySelector("#cancelEditCandidate")?.addEventListener("click", closeEditModal);
   document.querySelector("#deleteCandidateFromModal")?.addEventListener("click", () => {
-    deleteCandidate(editingCandidateId, "この応募者を削除しますか？この操作は取り消せません。", true);
+    deleteCandidate(editingCandidateId, "この応募者を削除しますか？", true);
   });
   document.querySelector("#editCandidateForm")?.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -614,7 +613,7 @@ function bindCandidateRows() {
       const candidateId = event.currentTarget.dataset.deleteCandidateId;
       const candidate = candidates.find((item) => item.id === candidateId);
       if (!candidate) return;
-      deleteCandidate(candidateId, `${candidate.name}さんを削除しますか？`);
+      deleteCandidate(candidateId, "この応募者を削除しますか？");
     });
   });
 }
