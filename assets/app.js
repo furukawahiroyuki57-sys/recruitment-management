@@ -1,7 +1,17 @@
 const STORAGE_KEY = "restaurant-recruitment-candidates-v1";
 const APPLICATION_SOURCES = ["Indeed", "Airワーク", "グルメキャリー", "バイトル", "飲食店ドットコム", "Instagram", "紹介", "その他"];
 const CANDIDATE_STATUSES = ["応募受付", "書類選考", "面接調整中", "一次面接", "二次面接", "採用", "不採用", "辞退", "保留"];
-const HIRING_DECISIONS = ["未定", "採用", "不採用", "辞退", "保留"];
+const HIRING_DECISIONS = ["採用", "保留", "不採用"];
+const RATING_OPTIONS = ["★★★★★", "★★★★☆", "★★★☆☆", "★★☆☆☆", "★☆☆☆☆"];
+const EVALUATION_ITEMS = [
+  ["firstImpression", "第一印象"],
+  ["smile", "笑顔"],
+  ["communication", "受け答え"],
+  ["cleanliness", "清潔感"],
+  ["restaurantExperience", "飲食経験"],
+  ["sushiExperience", "寿司経験"],
+  ["foreignLanguage", "外国語対応"]
+];
 const navigation = [["dashboard", "ダッシュボード"], ["applicants", "応募者"], ["interviews", "面接"], ["stores", "配属店舗"], ["analytics", "分析"], ["settings", "設定"]];
 const jobs = [
   { id: "j1", title: "寿司職人", location: "店舗", type: "正社員", status: "公開中" },
@@ -12,10 +22,10 @@ const jobs = [
   { id: "j6", title: "アルバイト（ホール）", location: "店舗", type: "アルバイト", status: "公開中" }
 ];
 const defaultCandidates = [
-  { id: "c1", name: "山田 太郎", email: "taro.yamada@example.com", phone: "", jobId: "j1", storeId: "s3", status: "一次面接", applicationSource: "Indeed", applicationSourceOther: "", appliedAt: "2026-07-05", interviewAt: "2026-07-06T14:00", interviewer: "山田", resumeName: "yamada_taro.pdf", interviewHistory: "", evaluation: "", hiringDecision: "未定", memo: "" },
-  { id: "c2", name: "佐藤 花子", email: "hanako.sato@example.com", phone: "", jobId: "j3", storeId: "s2", status: "面接調整中", applicationSource: "Instagram", applicationSourceOther: "", appliedAt: "2026-07-05", interviewAt: "", interviewer: "鈴木", resumeName: "sato_hanako.pdf", interviewHistory: "", evaluation: "", hiringDecision: "未定", memo: "" },
-  { id: "c3", name: "鈴木 一郎", email: "ichiro.suzuki@example.com", phone: "", jobId: "j6", storeId: "s1", status: "採用", applicationSource: "Airワーク", applicationSourceOther: "", appliedAt: "2026-06-20", interviewAt: "2026-07-05T10:00", interviewer: "中村", resumeName: "suzuki_ichiro.pdf", interviewHistory: "", evaluation: "", hiringDecision: "採用", memo: "" },
-  { id: "c4", name: "高橋 美咲", email: "misaki.takahashi@example.com", phone: "", jobId: "j2", storeId: "s3", status: "応募受付", applicationSource: "紹介", applicationSourceOther: "", appliedAt: "2026-07-02", interviewAt: "", interviewer: "", resumeName: "takahashi_misaki.pdf", interviewHistory: "", evaluation: "", hiringDecision: "未定", memo: "" }
+  { id: "c1", name: "山田 太郎", email: "taro.yamada@example.com", phone: "", jobId: "j1", storeId: "s3", status: "一次面接", applicationSource: "Indeed", applicationSourceOther: "", appliedAt: "2026-07-05", interviewAt: "2026-07-06T14:00", interviewer: "山田", resumeName: "yamada_taro.pdf", interviewHistory: "", evaluation: "", evaluationRatings: { firstImpression: "★★★★★", smile: "★★★★★", communication: "★★★★☆", cleanliness: "★★★★★", restaurantExperience: "★★★★☆", sushiExperience: "★★☆☆☆", foreignLanguage: "★★★★☆" }, hiringDecision: "保留", memo: "" },
+  { id: "c2", name: "佐藤 花子", email: "hanako.sato@example.com", phone: "", jobId: "j3", storeId: "s2", status: "面接調整中", applicationSource: "Instagram", applicationSourceOther: "", appliedAt: "2026-07-05", interviewAt: "", interviewer: "鈴木", resumeName: "sato_hanako.pdf", interviewHistory: "", evaluation: "", evaluationRatings: {}, hiringDecision: "保留", memo: "" },
+  { id: "c3", name: "鈴木 一郎", email: "ichiro.suzuki@example.com", phone: "", jobId: "j6", storeId: "s1", status: "採用", applicationSource: "Airワーク", applicationSourceOther: "", appliedAt: "2026-06-20", interviewAt: "2026-07-05T10:00", interviewer: "中村", resumeName: "suzuki_ichiro.pdf", interviewHistory: "", evaluation: "", evaluationRatings: {}, hiringDecision: "採用", memo: "" },
+  { id: "c4", name: "高橋 美咲", email: "misaki.takahashi@example.com", phone: "", jobId: "j2", storeId: "s3", status: "応募受付", applicationSource: "紹介", applicationSourceOther: "", appliedAt: "2026-07-02", interviewAt: "", interviewer: "", resumeName: "takahashi_misaki.pdf", interviewHistory: "", evaluation: "", evaluationRatings: {}, hiringDecision: "保留", memo: "" }
 ];
 const interviews = [
   { id: "i1", candidateId: "c1", scheduledAt: "2026-07-05T14:00", interviewer: "山田", format: "オンライン" },
@@ -44,7 +54,8 @@ function loadCandidates() {
     phone: candidate.phone || "",
     interviewHistory: candidate.interviewHistory || defaultInterviewHistory(candidate),
     evaluation: candidate.evaluation || "",
-    hiringDecision: candidate.hiringDecision || inferHiringDecision(candidate.status),
+    evaluationRatings: normalizeEvaluationRatings(candidate.evaluationRatings),
+    hiringDecision: normalizeHiringDecision(candidate.hiringDecision || inferHiringDecision(candidate.status)),
     memo: candidate.memo || ""
   }));
 }
@@ -101,6 +112,11 @@ function select(label, name, options, selected = "") {
   return `<label class="grid gap-1.5 text-sm font-medium text-slate-600">${escapeHtml(label)}<select name="${name}" class="min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100">${options.map((option) => `<option value="${escapeHtml(option.value)}" ${option.value === selected ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}</select></label>`;
 }
 
+function ratingSelect(label, name, selected = "★★★☆☆") {
+  const options = RATING_OPTIONS.map((rating) => ({ label: rating, value: rating }));
+  return select(label, name, options, selected);
+}
+
 function table(columns, rows, editable = false) {
   return `<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div class="w-full overflow-x-auto"><table class="w-full min-w-full table-auto text-left text-sm"><thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500"><tr>${columns.map((column) => `<th class="px-4 py-3">${escapeHtml(column.label)}</th>`).join("")}</tr></thead><tbody class="divide-y divide-slate-100">${rows.map((row) => {
     const editableAttrs = editable ? `class="cursor-pointer align-top transition hover:bg-blue-50/60 focus-within:bg-blue-50" data-candidate-id="${escapeHtml(row.id)}" tabindex="0" aria-label="${escapeHtml(row.name)}を編集"` : `class="align-top"`;
@@ -133,7 +149,18 @@ function storeName(storeId) {
 }
 
 function inferHiringDecision(status) {
-  return HIRING_DECISIONS.includes(status) ? status : "未定";
+  return HIRING_DECISIONS.includes(status) ? status : "保留";
+}
+
+function normalizeHiringDecision(decision) {
+  return HIRING_DECISIONS.includes(decision) ? decision : "保留";
+}
+
+function normalizeEvaluationRatings(ratings = {}) {
+  return EVALUATION_ITEMS.reduce((result, [key]) => {
+    result[key] = RATING_OPTIONS.includes(ratings[key]) ? ratings[key] : "★★★☆☆";
+    return result;
+  }, {});
 }
 
 function defaultInterviewHistory(candidate) {
@@ -179,7 +206,8 @@ function kpis() {
 function filteredCandidates() {
   const query = filters.query.trim().toLowerCase();
   return candidates.filter((candidate) => {
-    const haystack = `${candidate.name} ${candidate.email} ${candidate.phone} ${jobTitle(candidate.jobId)} ${storeName(candidate.storeId)} ${sourceLabel(candidate)} ${candidate.status} ${candidate.evaluation} ${candidate.hiringDecision} ${candidate.memo}`.toLowerCase();
+    const ratingText = Object.values(candidate.evaluationRatings || {}).join(" ");
+    const haystack = `${candidate.name} ${candidate.email} ${candidate.phone} ${jobTitle(candidate.jobId)} ${storeName(candidate.storeId)} ${sourceLabel(candidate)} ${candidate.status} ${candidate.evaluation} ${ratingText} ${candidate.hiringDecision} ${candidate.memo}`.toLowerCase();
     const queryMatches = !query || haystack.includes(query);
     const sourceMatches = filters.source === "all" || candidate.applicationSource === filters.source;
     return queryMatches && sourceMatches;
@@ -292,6 +320,7 @@ function editModal() {
   const hiringDecisionOptions = HIRING_DECISIONS.map((decision) => ({ label: decision, value: decision }));
   const jobOptions = jobs.map((job) => ({ label: job.title, value: job.id }));
   const storeOptions = stores.map((store) => ({ label: store.name, value: store.id }));
+  const evaluationFields = EVALUATION_ITEMS.map(([key, label]) => ratingSelect(label, `rating_${key}`, candidate.evaluationRatings[key])).join("");
   const showOther = candidate.applicationSource === "その他";
   return `
     <div class="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="editCandidateTitle">
@@ -316,10 +345,13 @@ function editModal() {
           </div>
           <div class="grid gap-4 sm:grid-cols-2">
             <div id="otherSourceField" class="${showOther ? "" : "hidden"}">${input("その他媒体名", "applicationSourceOther", "", "text", candidate.applicationSourceOther)}</div>
-            ${select("採否", "hiringDecision", hiringDecisionOptions, candidate.hiringDecision)}
+            ${select("総合評価", "hiringDecision", hiringDecisionOptions, candidate.hiringDecision)}
           </div>
           ${textarea("面接履歴", "interviewHistory", "面接日時・担当者・結果など", candidate.interviewHistory)}
-          ${input("評価", "evaluation", "例: 接客経験あり、即戦力候補", "text", candidate.evaluation)}
+          <section class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+            <h3 class="text-sm font-semibold text-slate-700">評価</h3>
+            <div class="mt-3 grid gap-3 sm:grid-cols-2">${evaluationFields}</div>
+          </section>
           ${textarea("メモ", "memo", "応募者に関するメモ", candidate.memo)}
           <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
             ${button("キャンセル", "secondary", "id=\"cancelEditCandidate\" type=\"button\"")}
@@ -346,6 +378,10 @@ function updateCandidate(form) {
   if (!candidate) return;
   const data = new FormData(form);
   const applicationSource = String(data.get("applicationSource"));
+  const evaluationRatings = EVALUATION_ITEMS.reduce((result, [key]) => {
+    result[key] = String(data.get(`rating_${key}`));
+    return result;
+  }, {});
   Object.assign(candidate, {
     name: String(data.get("name")).trim(),
     email: String(data.get("email")).trim(),
@@ -356,7 +392,8 @@ function updateCandidate(form) {
     applicationSource,
     applicationSourceOther: applicationSource === "その他" ? String(data.get("applicationSourceOther")).trim() : "",
     interviewHistory: String(data.get("interviewHistory")).trim(),
-    evaluation: String(data.get("evaluation")).trim(),
+    evaluation: Object.values(evaluationRatings).join(" "),
+    evaluationRatings,
     hiringDecision: String(data.get("hiringDecision")),
     memo: String(data.get("memo")).trim()
   });
